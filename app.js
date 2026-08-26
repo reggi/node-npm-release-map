@@ -22,17 +22,13 @@ const formatDate = (value) =>
 
 function renderNpmStatus(npm) {
   const pending = npm.pendingNodeUpdates;
+  const openPullRequests = npm.openNodeUpdates;
 
   if (pending.length) {
-    const pendingByVersion = new Map();
-    for (const update of pending) {
-      const updates = pendingByVersion.get(update.available) ?? [];
-      updates.push(update);
-      pendingByVersion.set(update.available, updates);
-    }
-    const pendingText = [...pendingByVersion]
-      .map(([available, updates]) =>
-        `npm ${available} for Node.js ${updates.map(({ nodeCycle }) => nodeCycle).join(" and ")}`)
+    const pendingText = pending
+      .map((update) => update.kind === "integration"
+        ? `npm ${update.available} for Node.js main`
+        : `npm ${update.available} backport for Node.js ${update.target}`)
       .join("; ");
 
     status.className = "npm-status callout";
@@ -40,8 +36,24 @@ function renderNpmStatus(npm) {
       <div class="status-icon">↗</div>
       <div>
         <p class="status-label">Available npm integrations</p>
-        <h2>Newer npm releases are available for Node.js</h2>
+        <h2>npm updates need Node.js integration</h2>
         <p>${escapeHtml(pendingText)}.</p>
+      </div>`;
+    return;
+  }
+
+  if (openPullRequests.length) {
+    const pullRequestText = openPullRequests
+      .map((pull) =>
+        `<a href="${escapeHtml(pull.url)}">nodejs/node#${pull.number}</a> updates npm to ${escapeHtml(pull.version)} on <code>${escapeHtml(pull.base)}</code>`)
+      .join("; ");
+    status.className = "npm-status callout";
+    status.innerHTML = `
+      <div class="status-icon">↗</div>
+      <div>
+        <p class="status-label">Open Node.js pull request</p>
+        <h2>An npm update PR already exists</h2>
+        <p>${pullRequestText}.</p>
       </div>`;
     return;
   }
@@ -49,9 +61,11 @@ function renderNpmStatus(npm) {
   status.innerHTML = `
     <div class="status-icon">✓</div>
     <div>
-      <p class="status-label">npm major coverage</p>
-      <h2>Bundled npm majors are up to date</h2>
-      <p>Each npm major currently bundled with a supported Node.js line is at its latest release.</p>
+      <p class="status-label">Node.js integration status</p>
+      <h2>No npm integrations need action</h2>
+      <p>${npm.stagedNodeUpdates.length
+        ? "Newer npm releases are already queued on Node.js staging branches."
+        : "Supported Node.js lines bundle the latest applicable npm releases."}</p>
     </div>`;
 }
 
@@ -64,7 +78,7 @@ function renderNpmMajorStatus(missing) {
   const versions = missing.map(({ latest }) => `npm ${latest}`).join(", ");
   majorStatus.hidden = false;
   majorStatus.innerHTML = `
-    <div class="status-icon">↗</div>
+    <div class="status-icon">!</div>
     <div>
     <p class="status-label">Unbundled npm major</p>
     <h2>${escapeHtml(versions)} ${missing.length === 1 ? "is" : "are"} not bundled with Node.js yet</h2>
@@ -105,9 +119,23 @@ function render() {
         <span>npm ${escapeHtml(release.npm ?? "not bundled")}</span>
         <time datetime="${escapeHtml(release.date)}">${formatDate(release.date)}</time>
       </div>`).join("");
-    const npmUpdate = line.npmUpdate
-      ? `<span class="update-note">npm ${escapeHtml(line.npmUpdate.available)} available</span>`
-      : "";
+    let updateLabel = "";
+    if (line.npmUpdate?.status === "staged") {
+      updateLabel = `npm ${line.npmUpdate.available} queued in ${line.npmUpdate.ref} for the next Node.js release`;
+    } else if (line.npmUpdate?.status === "release-branch") {
+      updateLabel = `npm ${line.npmUpdate.available} is on the release branch`;
+    } else if (line.npmUpdate?.status === "open-pr") {
+      updateLabel = `npm ${line.npmUpdate.available} has open PR #${line.npmUpdate.pullRequest.number} targeting ${line.npmUpdate.ref}`;
+    } else if (line.npmUpdate?.status === "awaiting-main") {
+      updateLabel = `npm ${line.npmUpdate.available} awaiting main integration`;
+    } else if (line.npmUpdate?.status === "backport") {
+      updateLabel = `npm ${line.npmUpdate.available} backport available`;
+    }
+    const npmUpdate = line.npmUpdate?.status === "open-pr"
+      ? `<span class="update-note">npm ${escapeHtml(line.npmUpdate.available)} has open <a href="${escapeHtml(line.npmUpdate.pullRequest.url)}">PR #${line.npmUpdate.pullRequest.number}</a> targeting ${escapeHtml(line.npmUpdate.ref)}</span>`
+      : updateLabel
+        ? `<span class="update-note ${line.npmUpdate.status === "staged" ? "staged" : ""}">${escapeHtml(updateLabel)}</span>`
+        : "";
 
     return `
       <details class="release-line">

@@ -283,6 +283,14 @@ h1 span {
   margin-top: 7px;
 }
 
+.update-note.staged {
+  color: var(--green);
+}
+
+.update-note a {
+  color: inherit;
+}
+
 .pair-arrow {
   color: #5d675f;
 }

@@ -1,13 +1,15 @@
 {
-  "generatedAt": "2026-08-26T22:30:58.603Z",
+  "generatedAt": "2026-08-26T22:56:38.548Z",
   "releaseCount": 863,
   "sources": {
     "node": "https://nodejs.org/dist/index.json",
     "npm": "https://registry.npmjs.org/npm",
-    "schedule": "https://raw.githubusercontent.com/nodejs/Release/main/schedule.json"
+    "schedule": "https://raw.githubusercontent.com/nodejs/Release/main/schedule.json",
+    "nodeRepository": "https://raw.githubusercontent.com/nodejs/node"
   },
   "npm": {
     "latest": "12.0.2",
+    "main": "11.19.0",
     "maxBundledMajor": 11,
     "bundledMajors": [
       11,
@@ -22,21 +24,21 @@
       2,
       1
     ],
-    "pendingNodeUpdates": [
+    "pendingNodeUpdates": [],
+    "openNodeUpdates": [
       {
-        "nodeCycle": "26",
-        "bundled": "11.19.0",
-        "available": "11.19.1"
-      },
-      {
-        "nodeCycle": "24",
-        "bundled": "11.19.0",
-        "available": "11.19.1"
-      },
+        "number": 65573,
+        "url": "https://github.com/nodejs/node/pull/65573",
+        "title": "deps: upgrade npm to 11.19.1",
+        "version": "11.19.1",
+        "base": "main"
+      }
+    ],
+    "stagedNodeUpdates": [
       {
         "nodeCycle": "22",
-        "bundled": "10.9.8",
-        "available": "10.9.9"
+        "available": "10.9.9",
+        "ref": "v22.x-staging"
       }
     ],
     "unbundledNewerMajors": [
@@ -128,9 +130,24 @@
           "lts": false
         }
       ],
+      "branchNpm": {
+        "releaseRef": "v26.x",
+        "release": "11.19.0",
+        "stagingRef": "v26.x-staging",
+        "staging": "11.19.0"
+      },
       "npmUpdate": {
+        "status": "open-pr",
         "bundled": "11.19.0",
-        "available": "11.19.1"
+        "available": "11.19.1",
+        "ref": "main",
+        "pullRequest": {
+          "number": 65573,
+          "url": "https://github.com/nodejs/node/pull/65573",
+          "title": "deps: upgrade npm to 11.19.1",
+          "version": "11.19.1",
+          "base": "main"
+        }
       }
     },
     {
@@ -225,11 +242,7 @@
           "date": "2025-10-15",
           "lts": false
         }
-      ],
-      "npmUpdate": {
-        "bundled": "11.12.1",
-        "available": "11.19.1"
-      }
+      ]
     },
     {
       "cycle": "24",
@@ -408,9 +421,24 @@
           "lts": false
         }
       ],
+      "branchNpm": {
+        "releaseRef": "v24.x",
+        "release": "11.19.0",
+        "stagingRef": "v24.x-staging",
+        "staging": "11.19.0"
+      },
       "npmUpdate": {
+        "status": "open-pr",
         "bundled": "11.19.0",
-        "available": "11.19.1"
+        "available": "11.19.1",
+        "ref": "main",
+        "pullRequest": {
+          "number": 65573,
+          "url": "https://github.com/nodejs/node/pull/65573",
+          "title": "deps: upgrade npm to 11.19.1",
+          "version": "11.19.1",
+          "base": "main"
+        }
       }
     },
     {
@@ -505,11 +533,7 @@
           "date": "2024-10-16",
           "lts": false
         }
-      ],
-      "npmUpdate": {
-        "bundled": "10.9.2",
-        "available": "10.9.9"
-      }
+      ]
     },
     {
       "cycle": "22",
@@ -730,9 +754,17 @@
           "lts": false
         }
       ],
+      "branchNpm": {
+        "releaseRef": "v22.x",
+        "release": "10.9.8",
+        "stagingRef": "v22.x-staging",
+        "staging": "10.9.9"
+      },
       "npmUpdate": {
+        "status": "staged",
         "bundled": "10.9.8",
-        "available": "10.9.9"
+        "available": "10.9.9",
+        "ref": "v22.x-staging"
       }
     },
     {
@@ -821,11 +853,7 @@
           "date": "2023-10-17",
           "lts": false
         }
-      ],
-      "npmUpdate": {
-        "bundled": "10.5.0",
-        "available": "10.9.9"
-      }
+      ]
     },
     {
       "cycle": "20",
@@ -1081,11 +1109,7 @@
           "date": "2023-04-17",
           "lts": false
         }
-      ],
-      "npmUpdate": {
-        "bundled": "10.8.2",
-        "available": "10.9.9"
-      }
+      ]
     },
     {
       "cycle": "19",
@@ -1173,11 +1197,7 @@
           "date": "2022-10-17",
           "lts": false
         }
-      ],
-      "npmUpdate": {
-        "bundled": "9.6.3",
-        "available": "9.9.4"
-      }
+      ]
     },
     {
       "cycle": "18",
@@ -1415,11 +1435,7 @@
           "date": "2022-04-18",
           "lts": false
         }
-      ],
-      "npmUpdate": {
-        "bundled": "10.8.2",
-        "available": "10.9.9"
-      }
+      ]
     },
     {
       "cycle": "17",
@@ -1519,11 +1535,7 @@
           "date": "2021-10-19",
           "lts": false
         }
-      ],
-      "npmUpdate": {
-        "bundled": "8.11.0",
-        "available": "8.19.4"
-      }
+      ]
     },
     {
       "cycle": "16",
@@ -1755,8 +1767,7 @@
           "date": "2021-04-20",
           "lts": false
         }
-      ],
-      "npmUpdate": null
+      ]
     },
     {
       "cycle": "15",
@@ -1874,11 +1885,7 @@
           "date": "2020-10-20",
           "lts": false
         }
-      ],
-      "npmUpdate": {
-        "bundled": "7.7.6",
-        "available": "7.24.2"
-      }
+      ]
     },
     {
       "cycle": "14",
@@ -2164,8 +2171,7 @@
           "date": "2020-04-21",
           "lts": false
         }
-      ],
-      "npmUpdate": null
+      ]
     },
     {
       "cycle": "13",
@@ -2277,11 +2283,7 @@
           "date": "2019-10-22",
           "lts": false
         }
-      ],
-      "npmUpdate": {
-        "bundled": "6.14.4",
-        "available": "6.14.18"
-      }
+      ]
     },
     {
       "cycle": "12",
@@ -2597,11 +2599,7 @@
           "date": "2019-04-23",
           "lts": false
         }
-      ],
-      "npmUpdate": {
-        "bundled": "6.14.16",
-        "available": "6.14.18"
-      }
+      ]
     },
     {
       "cycle": "11",
@@ -2713,11 +2711,7 @@
           "date": "2018-10-23",
           "lts": false
         }
-      ],
-      "npmUpdate": {
-        "bundled": "6.7.0",
-        "available": "6.14.18"
-      }
+      ]
     },
     {
       "cycle": "10",
@@ -2979,11 +2973,7 @@
           "date": "2018-04-24",
           "lts": false
         }
-      ],
-      "npmUpdate": {
-        "bundled": "6.14.12",
-        "available": "6.14.18"
-      }
+      ]
     },
     {
       "cycle": "9",
@@ -3101,11 +3091,7 @@
           "date": "2017-10-31",
           "lts": false
         }
-      ],
-      "npmUpdate": {
-        "bundled": "5.6.0",
-        "available": "5.10.0"
-      }
+      ]
     },
     {
       "cycle": "8",
@@ -3331,11 +3317,7 @@
           "date": "2017-05-30",
           "lts": false
         }
-      ],
-      "npmUpdate": {
-        "bundled": "6.13.4",
-        "available": "6.14.18"
-      }
+      ]
     },
     {
       "cycle": "7",
@@ -3447,11 +3429,7 @@
           "date": "2016-10-25",
           "lts": false
         }
-      ],
-      "npmUpdate": {
-        "bundled": "4.2.0",
-        "available": "4.6.1"
-      }
+      ]
     },
     {
       "cycle": "6",
@@ -3731,8 +3709,7 @@
           "date": "2016-04-26",
           "lts": false
         }
-      ],
-      "npmUpdate": null
+      ]
     },
     {
       "cycle": "5",
@@ -3856,11 +3833,7 @@
           "date": "2015-10-29",
           "lts": false
         }
-      ],
-      "npmUpdate": {
-        "bundled": "3.8.6",
-        "available": "3.10.10"
-      }
+      ]
     },
     {
       "cycle": "4",
@@ -4110,11 +4083,7 @@
           "date": "2015-09-08",
           "lts": false
         }
-      ],
-      "npmUpdate": {
-        "bundled": "2.15.11",
-        "available": "2.15.12"
-      }
+      ]
     },
     {
       "cycle": "0.12",
@@ -4238,11 +4207,7 @@
           "date": "2015-02-06",
           "lts": false
         }
-      ],
-      "npmUpdate": {
-        "bundled": "2.15.11",
-        "available": "2.15.12"
-      }
+      ]
     },
     {
       "cycle": "0.11",
@@ -4354,11 +4319,7 @@
           "date": "2013-03-28",
           "lts": false
         }
-      ],
-      "npmUpdate": {
-        "bundled": "2.3.0",
-        "available": "2.15.12"
-      }
+      ]
     },
     {
       "cycle": "0.10",
@@ -4662,11 +4623,7 @@
           "date": "2013-03-11",
           "lts": false
         }
-      ],
-      "npmUpdate": {
-        "bundled": "2.15.1",
-        "available": "2.15.12"
-      }
+      ]
     },
     {
       "cycle": "0.9",
@@ -4754,11 +4711,7 @@
           "date": "2012-07-20",
           "lts": false
         }
-      ],
-      "npmUpdate": {
-        "bundled": "1.2.12",
-        "available": "1.4.29"
-      }
+      ]
     },
     {
       "cycle": "0.8",
@@ -4942,11 +4895,7 @@
           "date": "2012-06-22",
           "lts": false
         }
-      ],
-      "npmUpdate": {
-        "bundled": "1.2.30",
-        "available": "1.4.29"
-      }
+      ]
     },
     {
       "cycle": "0.7",
@@ -5034,11 +4983,7 @@
           "date": "2012-01-17",
           "lts": false
         }
-      ],
-      "npmUpdate": {
-        "bundled": "1.1.30",
-        "available": "1.4.29"
-      }
+      ]
     },
     {
       "cycle": "0.6",
@@ -5180,11 +5125,7 @@
           "date": "2011-11-04",
           "lts": false
         }
-      ],
-      "npmUpdate": {
-        "bundled": "1.1.37",
-        "available": "1.4.29"
-      }
+      ]
     },
     {
       "cycle": "0.5",
@@ -5260,8 +5201,7 @@
           "date": "2011-08-26",
           "lts": false
         }
-      ],
-      "npmUpdate": null
+      ]
     },
     {
       "cycle": "0.4",
@@ -5349,8 +5289,7 @@
           "date": "2011-08-26",
           "lts": false
         }
-      ],
-      "npmUpdate": null
+      ]
     },
     {
       "cycle": "0.3",
@@ -5414,8 +5353,7 @@
           "date": "2011-08-26",
           "lts": false
         }
-      ],
-      "npmUpdate": null
+      ]
     },
     {
       "cycle": "0.2",
@@ -5467,8 +5405,7 @@
           "date": "2011-08-26",
           "lts": false
         }
-      ],
-      "npmUpdate": null
+      ]
     },
     {
       "cycle": "0.1",
@@ -5688,8 +5625,7 @@
           "date": "2011-08-26",
           "lts": false
         }
-      ],
-      "npmUpdate": null
+      ]
     }
   ]
 }

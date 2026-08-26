@@ -4,6 +4,8 @@ import { dirname, resolve } from "node:path";
 const NODE_INDEX_URL = "https://nodejs.org/dist/index.json";
 const NPM_PACKUMENT_URL = "https://registry.npmjs.org/npm";
 const NODE_SCHEDULE_URL = "https://raw.githubusercontent.com/nodejs/Release/main/schedule.json";
+const NODE_REPOSITORY_RAW_URL = "https://raw.githubusercontent.com/nodejs/node";
+const GITHUB_API_URL = "https://api.github.com";
 
 async function fetchJson(url) {
   const response = await fetch(url, {
@@ -47,6 +49,39 @@ function latestStableByMajor(versions) {
 
 function isEol(eol, today) {
   return typeof eol === "string" && eol <= today;
+}
+
+async function fetchBundledNpm(ref) {
+  const packageJson = await fetchJson(
+    `${NODE_REPOSITORY_RAW_URL}/${encodeURIComponent(ref)}/deps/npm/package.json`,
+  );
+  return packageJson.version;
+}
+
+async function fetchOpenNpmUpgradePulls() {
+  const query = encodeURIComponent(
+    'repo:nodejs/node is:pr is:open label:npm in:title "deps: upgrade npm to"',
+  );
+  const search = await fetchJson(
+    `${GITHUB_API_URL}/search/issues?q=${query}&per_page=100`,
+  );
+  const candidates = search.items
+    .map((item) => ({
+      item,
+      version: item.title.match(/^deps: upgrade npm to v?(\d+\.\d+\.\d+)$/i)?.[1],
+    }))
+    .filter(({ version }) => version);
+
+  return Promise.all(candidates.map(async ({ item, version }) => {
+    const pull = await fetchJson(`${GITHUB_API_URL}/repos/nodejs/node/pulls/${item.number}`);
+    return {
+      number: item.number,
+      url: item.html_url,
+      title: item.title,
+      version,
+      base: pull.base.ref,
+    };
+  }));
 }
 
 const outputArgument = process.argv.indexOf("--output");
@@ -117,21 +152,125 @@ const maxBundledMajor = Math.max(...bundledNpmMajors);
 const npmLatestByMajor = latestStableByMajor(Object.keys(npmPackument.versions));
 const latestNpm = npmPackument["dist-tags"].latest;
 const latestNpmMajor = versionParts(latestNpm)?.[0];
+const maintainedLines = lines.filter(
+  (line) => !line.isEol && /^\d+$/.test(line.cycle),
+);
+const branchVersionsPromise = Promise.all(
+  maintainedLines.map(async (line) => {
+    const releaseRef = `v${line.cycle}.x`;
+    const stagingRef = `${releaseRef}-staging`;
+    const [release, staging] = await Promise.all([
+      fetchBundledNpm(releaseRef),
+      fetchBundledNpm(stagingRef),
+    ]);
+    return [line.cycle, { releaseRef, release, stagingRef, staging }];
+  }),
+);
+const [branchVersions, mainNpm, openNpmUpgradePulls] = await Promise.all([
+  branchVersionsPromise,
+  fetchBundledNpm("main"),
+  fetchOpenNpmUpgradePulls(),
+]);
+const branchVersionsByCycle = new Map(branchVersions);
+const mainNpmMajor = versionParts(mainNpm)?.[0];
+const mainAvailable = npmLatestByMajor.get(mainNpmMajor);
+const mainPullRequest = openNpmUpgradePulls.find(
+  (pull) =>
+    mainAvailable
+    && pull.base === "main"
+    && compareVersions(pull.version, mainAvailable) >= 0,
+);
+const mainUpdate = mainAvailable
+  && compareVersions(mainAvailable, mainNpm) > 0
+  && !mainPullRequest
+  ? { kind: "integration", target: "main", bundled: mainNpm, available: mainAvailable }
+  : null;
+const pendingNodeUpdates = mainUpdate ? [mainUpdate] : [];
+const stagedNodeUpdates = [];
+const openNodeUpdates = mainPullRequest ? [mainPullRequest] : [];
 
-for (const line of lines) {
+for (const line of maintainedLines) {
   const bundledMajor = versionParts(line.latestNpm)?.[0];
   const available = npmLatestByMajor.get(bundledMajor);
-  line.npmUpdate = available && compareVersions(available, line.latestNpm) > 0
-    ? { bundled: line.latestNpm, available }
-    : null;
+  const branches = branchVersionsByCycle.get(line.cycle);
+
+  line.branchNpm = branches;
+  if (!available || compareVersions(available, line.latestNpm) <= 0) {
+    line.npmUpdate = null;
+    continue;
+  }
+
+  if (compareVersions(branches.staging, available) >= 0) {
+    line.npmUpdate = {
+      status: "staged",
+      bundled: line.latestNpm,
+      available,
+      ref: branches.stagingRef,
+    };
+    stagedNodeUpdates.push({
+      nodeCycle: line.cycle,
+      available,
+      ref: branches.stagingRef,
+    });
+    continue;
+  }
+
+  if (compareVersions(branches.release, available) >= 0) {
+    line.npmUpdate = {
+      status: "release-branch",
+      bundled: line.latestNpm,
+      available,
+      ref: branches.releaseRef,
+    };
+    continue;
+  }
+
+  const pullRequest = bundledMajor === mainNpmMajor
+    ? mainPullRequest
+    : openNpmUpgradePulls.find(
+      (pull) =>
+        [branches.stagingRef, branches.releaseRef].includes(pull.base)
+        && compareVersions(pull.version, available) >= 0,
+    );
+  if (pullRequest) {
+    line.npmUpdate = {
+      status: "open-pr",
+      bundled: line.latestNpm,
+      available,
+      ref: pullRequest.base,
+      pullRequest,
+    };
+    if (!openNodeUpdates.some(({ number }) => number === pullRequest.number)) {
+      openNodeUpdates.push(pullRequest);
+    }
+    continue;
+  }
+
+  if (bundledMajor === mainNpmMajor && mainUpdate) {
+    line.npmUpdate = {
+      status: "awaiting-main",
+      bundled: line.latestNpm,
+      available,
+      ref: "main",
+    };
+    continue;
+  }
+
+  line.npmUpdate = {
+    status: "backport",
+    bundled: line.latestNpm,
+    available,
+    ref: branches.stagingRef,
+  };
+  pendingNodeUpdates.push({
+    kind: "backport",
+    target: line.cycle,
+    bundled: line.latestNpm,
+    available,
+    ref: branches.stagingRef,
+  });
 }
 
-const pendingNodeUpdates = lines
-  .filter((line) => !line.isEol && line.npmUpdate)
-  .map((line) => ({
-    nodeCycle: line.cycle,
-    ...line.npmUpdate,
-  }));
 const unbundledNewerMajors = [...npmLatestByMajor.entries()]
   .filter(([major]) => major > maxBundledMajor && major <= latestNpmMajor)
   .sort(([a], [b]) => a - b)
@@ -144,12 +283,16 @@ const snapshot = {
     node: NODE_INDEX_URL,
     npm: NPM_PACKUMENT_URL,
     schedule: NODE_SCHEDULE_URL,
+    nodeRepository: NODE_REPOSITORY_RAW_URL,
   },
   npm: {
     latest: latestNpm,
+    main: mainNpm,
     maxBundledMajor,
     bundledMajors: [...bundledNpmMajors].sort((a, b) => b - a),
     pendingNodeUpdates,
+    openNodeUpdates,
+    stagedNodeUpdates,
     unbundledNewerMajors,
   },
   lines,
