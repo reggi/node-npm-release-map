@@ -68,7 +68,6 @@ function renderNpmMajorStatus(missing) {
     <div>
     <p class="status-label">Unbundled npm major</p>
     <h2>${escapeHtml(versions)} ${missing.length === 1 ? "is" : "are"} not bundled with Node.js yet</h2>
-    <p>This is separate from updates to npm majors already included in supported Node.js lines.</p>
     </div>`;
 }
 
