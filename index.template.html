@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="A daily map of released Node.js versions and their bundled npm versions.">
+    <title>Node.js ↔ npm version map</title>
+    <style>__STYLES__</style>
+  </head>
+  <body>
+    <main class="shell">
+      <header class="hero">
+        <div>
+          <p class="eyebrow">Bundled version index</p>
+          <h1>Node.js <span>↔</span> npm</h1>
+          <p class="lede">Every published Node.js release, mapped to the npm version bundled with it.</p>
+        </div>
+      </header>
+
+      <section id="npm-status" class="npm-status loading" aria-live="polite">
+        <div class="status-icon">…</div>
+        <div>
+          <p class="status-label">npm major coverage</p>
+          <h2>Loading the daily snapshot</h2>
+          <p>Comparing npm’s latest release with every npm major bundled by Node.js.</p>
+        </div>
+      </section>
+      <section id="npm-major-status" class="npm-status callout" aria-live="polite" hidden></section>
+
+      <section class="controls" aria-label="Release filters">
+        <label class="checkbox">
+          <input id="hide-eol" type="checkbox" checked>
+          <span aria-hidden="true"></span>
+          Hide EOL Node.js versions
+        </label>
+      </section>
+
+      <section>
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Release map</p>
+            <h2>Version lines</h2>
+          </div>
+          <p id="result-count" class="result-count"></p>
+        </div>
+        <div id="release-grid" class="release-grid" aria-live="polite">
+          <div class="empty-state">Loading releases…</div>
+        </div>
+      </section>
+
+      <footer>
+        <p>Generated <time id="generated-at">—</time> from the official <a href="https://nodejs.org/dist/index.json">Node.js release index</a>, <a href="https://github.com/nodejs/Release/blob/main/schedule.json">Node.js release schedule</a>, and <a href="https://registry.npmjs.org/npm">npm registry</a>.</p>
+        <a href="https://github.com/" id="source-link">View source</a>
+      </footer>
+    </main>
+    <script id="version-data" type="application/json">__VERSION_DATA__</script>
+    <script>__APP_SCRIPT__</script>
+  </body>
+</html>
