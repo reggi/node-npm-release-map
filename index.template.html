@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="A daily map of released Node.js versions and their bundled npm versions.">
+    <meta name="description" content="A daily map of upcoming npm releases and the npm versions bundled with Node.js.">
     <title>Node.js ↔ npm version map</title>
     <style>__STYLES__</style>
   </head>
@@ -25,6 +25,7 @@
           <p>Comparing npm’s latest release with every npm major bundled by Node.js.</p>
         </div>
       </section>
+      <section id="npm-release-status" class="npm-status callout" aria-live="polite" hidden></section>
       <section id="npm-major-status" class="npm-status alert" aria-live="polite" hidden></section>
 
       <section class="controls" aria-label="Release filters">
@@ -49,7 +50,7 @@
       </section>
 
       <footer>
-        <p>Generated <time id="generated-at">—</time> from the official <a href="https://nodejs.org/dist/index.json">Node.js release index</a>, <a href="https://github.com/nodejs/Release/blob/main/schedule.json">Node.js release schedule</a>, and <a href="https://registry.npmjs.org/npm">npm registry</a>.</p>
+        <p>Generated <time id="generated-at">—</time> from the official <a href="https://nodejs.org/dist/index.json">Node.js release index</a>, <a href="https://github.com/nodejs/Release/blob/main/schedule.json">Node.js release schedule</a>, <a href="https://registry.npmjs.org/npm">npm registry</a>, and open <a href="https://github.com/npm/cli/pulls">npm CLI pull requests</a>.</p>
         <a href="https://github.com/" id="source-link">View source</a>
       </footer>
     </main>

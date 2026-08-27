@@ -6,6 +6,15 @@ const NPM_PACKUMENT_URL = "https://registry.npmjs.org/npm";
 const NODE_SCHEDULE_URL = "https://raw.githubusercontent.com/nodejs/Release/main/schedule.json";
 const NODE_REPOSITORY_RAW_URL = "https://raw.githubusercontent.com/nodejs/node";
 const GITHUB_API_URL = "https://api.github.com";
+const NPM_CLI_PULLS_URL = `${GITHUB_API_URL}/repos/npm/cli/pulls?state=open&per_page=100`;
+
+const NPM_RELEASE_STATES = Object.freeze({
+  NPM_RELEASE_PR: "npm-release-pr",
+  AWAITING_NODE_PR: "awaiting-node-pr",
+  NODE_PR_REVIEW: "node-pr-review",
+  NODE_MERGED: "node-merged",
+  NODE_RELEASED: "node-released",
+});
 
 async function fetchJson(url) {
   const response = await fetch(url, {
@@ -58,6 +67,47 @@ async function fetchBundledNpm(ref) {
   return packageJson.version;
 }
 
+async function fetchOpenNpmReleasePulls() {
+  const pulls = await fetchJson(NPM_CLI_PULLS_URL);
+  return pulls
+    .map((pull) => {
+      const hasPendingLabel = pull.labels.some(
+        ({ name }) => name === "autorelease: pending",
+      );
+      const version = pull.title.match(
+        /^chore: release v?(\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?)$/i,
+      )?.[1];
+      const target = pull.base.ref;
+      const releaseType = target === "latest"
+        ? "latest"
+        : /^release\/v\d+$/.test(target)
+          ? "backport"
+          : null;
+
+      if (!hasPendingLabel || !version || !releaseType) return null;
+
+      return {
+        version,
+        state: NPM_RELEASE_STATES.NPM_RELEASE_PR,
+        releaseType,
+        target,
+        pullRequest: {
+          number: pull.number,
+          title: pull.title,
+          url: pull.html_url,
+          createdAt: pull.created_at,
+          updatedAt: pull.updated_at,
+        },
+      };
+    })
+    .filter(Boolean)
+    .sort(
+      (a, b) =>
+        compareVersions(b.version, a.version)
+        || b.version.localeCompare(a.version),
+    );
+}
+
 async function fetchOpenNpmUpgradePulls() {
   const query = encodeURIComponent(
     'repo:nodejs/node is:pr is:open label:npm in:title "deps: upgrade npm to"',
@@ -68,7 +118,7 @@ async function fetchOpenNpmUpgradePulls() {
   const candidates = search.items
     .map((item) => ({
       item,
-      version: item.title.match(/^deps: upgrade npm to v?(\d+\.\d+\.\d+)$/i)?.[1],
+      version: item.title.match(/deps: upgrade npm to v?(\d+\.\d+\.\d+)/i)?.[1],
     }))
     .filter(({ version }) => version);
 
@@ -80,23 +130,25 @@ async function fetchOpenNpmUpgradePulls() {
       title: item.title,
       version,
       base: pull.base.ref,
+      state: NPM_RELEASE_STATES.NODE_PR_REVIEW,
     };
   }));
 }
 
 const outputArgument = process.argv.indexOf("--output");
 const outputPath = resolve(
-  outputArgument === -1 ? "data/versions.json" : process.argv[outputArgument + 1],
+  outputArgument === -1 ? "dist/data/versions.json" : process.argv[outputArgument + 1],
 );
 const htmlArgument = process.argv.indexOf("--html");
 const htmlPath = resolve(
-  htmlArgument === -1 ? "index.html" : process.argv[htmlArgument + 1],
+  htmlArgument === -1 ? "dist/index.html" : process.argv[htmlArgument + 1],
 );
 
-const [nodeReleases, npmPackument, releaseSchedule] = await Promise.all([
+const [nodeReleases, npmPackument, releaseSchedule, pendingReleases] = await Promise.all([
   fetchJson(NODE_INDEX_URL),
   fetchJson(NPM_PACKUMENT_URL),
   fetchJson(NODE_SCHEDULE_URL),
+  fetchOpenNpmReleasePulls(),
 ]);
 
 const today = new Date().toISOString().slice(0, 10);
@@ -183,10 +235,17 @@ const mainPullRequest = openNpmUpgradePulls.find(
 const mainUpdate = mainAvailable
   && compareVersions(mainAvailable, mainNpm) > 0
   && !mainPullRequest
-  ? { kind: "integration", target: "main", bundled: mainNpm, available: mainAvailable }
+  ? {
+      state: NPM_RELEASE_STATES.AWAITING_NODE_PR,
+      kind: "integration",
+      target: "main",
+      bundled: mainNpm,
+      available: mainAvailable,
+    }
   : null;
 const pendingNodeUpdates = mainUpdate ? [mainUpdate] : [];
 const stagedNodeUpdates = [];
+const mergedNodeUpdates = [];
 const openNodeUpdates = mainPullRequest ? [mainPullRequest] : [];
 
 for (const line of maintainedLines) {
@@ -202,26 +261,35 @@ for (const line of maintainedLines) {
 
   if (compareVersions(branches.staging, available) >= 0) {
     line.npmUpdate = {
-      status: "staged",
+      state: NPM_RELEASE_STATES.NODE_MERGED,
       bundled: line.latestNpm,
       available,
       ref: branches.stagingRef,
     };
-    stagedNodeUpdates.push({
+    const mergedUpdate = {
       nodeCycle: line.cycle,
       available,
       ref: branches.stagingRef,
-    });
+      state: NPM_RELEASE_STATES.NODE_MERGED,
+    };
+    stagedNodeUpdates.push(mergedUpdate);
+    mergedNodeUpdates.push(mergedUpdate);
     continue;
   }
 
   if (compareVersions(branches.release, available) >= 0) {
     line.npmUpdate = {
-      status: "release-branch",
+      state: NPM_RELEASE_STATES.NODE_MERGED,
       bundled: line.latestNpm,
       available,
       ref: branches.releaseRef,
     };
+    mergedNodeUpdates.push({
+      nodeCycle: line.cycle,
+      available,
+      ref: branches.releaseRef,
+      state: NPM_RELEASE_STATES.NODE_MERGED,
+    });
     continue;
   }
 
@@ -234,7 +302,7 @@ for (const line of maintainedLines) {
     );
   if (pullRequest) {
     line.npmUpdate = {
-      status: "open-pr",
+      state: NPM_RELEASE_STATES.NODE_PR_REVIEW,
       bundled: line.latestNpm,
       available,
       ref: pullRequest.base,
@@ -248,7 +316,7 @@ for (const line of maintainedLines) {
 
   if (bundledMajor === mainNpmMajor && mainUpdate) {
     line.npmUpdate = {
-      status: "awaiting-main",
+      state: NPM_RELEASE_STATES.AWAITING_NODE_PR,
       bundled: line.latestNpm,
       available,
       ref: "main",
@@ -257,12 +325,13 @@ for (const line of maintainedLines) {
   }
 
   line.npmUpdate = {
-    status: "backport",
+    state: NPM_RELEASE_STATES.AWAITING_NODE_PR,
     bundled: line.latestNpm,
     available,
     ref: branches.stagingRef,
   };
   pendingNodeUpdates.push({
+    state: NPM_RELEASE_STATES.AWAITING_NODE_PR,
     kind: "backport",
     target: line.cycle,
     bundled: line.latestNpm,
@@ -284,15 +353,18 @@ const snapshot = {
     npm: NPM_PACKUMENT_URL,
     schedule: NODE_SCHEDULE_URL,
     nodeRepository: NODE_REPOSITORY_RAW_URL,
+    npmPullRequests: NPM_CLI_PULLS_URL,
   },
   npm: {
     latest: latestNpm,
     main: mainNpm,
     maxBundledMajor,
     bundledMajors: [...bundledNpmMajors].sort((a, b) => b - a),
+    pendingReleases,
     pendingNodeUpdates,
     openNodeUpdates,
     stagedNodeUpdates,
+    mergedNodeUpdates,
     unbundledNewerMajors,
   },
   lines,

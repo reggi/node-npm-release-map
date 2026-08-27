@@ -29,11 +29,7 @@ jobs:
           node-version: 22
 
       - name: Build daily snapshot
-        run: |
-          mkdir -p dist
-          node scripts/generate-data.mjs \
-            --output dist/data/versions.json \
-            --html dist/index.html
+        run: node scripts/generate-data.mjs
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5

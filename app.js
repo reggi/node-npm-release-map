@@ -1,7 +1,14 @@
 const grid = document.querySelector("#release-grid");
 const hideEolInput = document.querySelector("#hide-eol");
 const status = document.querySelector("#npm-status");
+const releaseStatus = document.querySelector("#npm-release-status");
 const majorStatus = document.querySelector("#npm-major-status");
+
+const NPM_RELEASE_STATES = Object.freeze({
+  AWAITING_NODE_PR: "awaiting-node-pr",
+  NODE_PR_REVIEW: "node-pr-review",
+  NODE_MERGED: "node-merged",
+});
 
 let snapshot;
 
@@ -19,6 +26,20 @@ const formatDate = (value) =>
     month: "short",
     day: "numeric",
   }).format(new Date(`${value}T00:00:00Z`));
+
+function getNpmUpdateState(update) {
+  if (update?.state) return update.state;
+  if (["staged", "release-branch"].includes(update?.status)) {
+    return NPM_RELEASE_STATES.NODE_MERGED;
+  }
+  if (update?.status === "open-pr") {
+    return NPM_RELEASE_STATES.NODE_PR_REVIEW;
+  }
+  if (["awaiting-main", "backport"].includes(update?.status)) {
+    return NPM_RELEASE_STATES.AWAITING_NODE_PR;
+  }
+  return null;
+}
 
 function renderNpmStatus(npm) {
   const pending = npm.pendingNodeUpdates;
@@ -43,17 +64,22 @@ function renderNpmStatus(npm) {
   }
 
   if (openPullRequests.length) {
-    const pullRequestText = openPullRequests
+    const pullRequests = openPullRequests
       .map((pull) =>
-        `<a href="${escapeHtml(pull.url)}">nodejs/node#${pull.number}</a> updates npm to ${escapeHtml(pull.version)} on <code>${escapeHtml(pull.base)}</code>`)
-      .join("; ");
+        `<li>
+          <a href="${escapeHtml(pull.url)}">nodejs/node#${pull.number}</a>
+          <span>— updates npm to ${escapeHtml(pull.version)} on <code>${escapeHtml(pull.base)}</code></span>
+        </li>`)
+      .join("");
     status.className = "npm-status callout";
     status.innerHTML = `
       <div class="status-icon">↗</div>
       <div>
-        <p class="status-label">Open Node.js pull request</p>
-        <h2>An npm update PR already exists</h2>
-        <p>${pullRequestText}.</p>
+        <p class="status-label">Open Node.js pull requests</p>
+        <h2>${openPullRequests.length === 1
+          ? "An npm update PR is open in nodejs/node"
+          : `${openPullRequests.length} npm update PRs are open in nodejs/node`}</h2>
+        <ul class="pull-request-list">${pullRequests}</ul>
       </div>`;
     return;
   }
@@ -63,9 +89,38 @@ function renderNpmStatus(npm) {
     <div>
       <p class="status-label">Node.js integration status</p>
       <h2>No npm integrations need action</h2>
-      <p>${npm.stagedNodeUpdates.length
-        ? "Newer npm releases are already queued on Node.js staging branches."
+      <p>${(npm.mergedNodeUpdates ?? npm.stagedNodeUpdates).length
+        ? "Newer npm releases are already merged into Node.js branches."
         : "Supported Node.js lines bundle the latest applicable npm releases."}</p>
+    </div>`;
+}
+
+function renderPendingReleases(pendingReleases) {
+  if (!pendingReleases.length) {
+    releaseStatus.hidden = true;
+    return;
+  }
+
+  const releases = pendingReleases.map((release) => {
+    const action = release.releaseType === "backport"
+      ? `prepares npm ${release.version} as a backport from ${release.target}`
+      : `prepares npm ${release.version} from ${release.target}`;
+    return `
+      <li>
+        <a href="${escapeHtml(release.pullRequest.url)}">npm/cli#${release.pullRequest.number}</a>
+        <span>— ${escapeHtml(action)}</span>
+      </li>`;
+  }).join("");
+
+  releaseStatus.hidden = false;
+  releaseStatus.innerHTML = `
+    <div class="status-icon">↗</div>
+    <div>
+      <p class="status-label">Pending npm releases</p>
+      <h2>${pendingReleases.length === 1
+        ? "An npm release PR is open in npm/cli"
+        : `${pendingReleases.length} npm release PRs are open in npm/cli`}</h2>
+      <ul class="pull-request-list">${releases}</ul>
     </div>`;
 }
 
@@ -119,22 +174,21 @@ function render() {
         <span>npm ${escapeHtml(release.npm ?? "not bundled")}</span>
         <time datetime="${escapeHtml(release.date)}">${formatDate(release.date)}</time>
       </div>`).join("");
+    const updateState = getNpmUpdateState(line.npmUpdate);
     let updateLabel = "";
-    if (line.npmUpdate?.status === "staged") {
-      updateLabel = `npm ${line.npmUpdate.available} queued in ${line.npmUpdate.ref} for the next Node.js release`;
-    } else if (line.npmUpdate?.status === "release-branch") {
-      updateLabel = `npm ${line.npmUpdate.available} is on the release branch`;
-    } else if (line.npmUpdate?.status === "open-pr") {
+    if (updateState === NPM_RELEASE_STATES.NODE_MERGED) {
+      updateLabel = `npm ${line.npmUpdate.available} is merged into ${line.npmUpdate.ref} for a future Node.js release`;
+    } else if (updateState === NPM_RELEASE_STATES.NODE_PR_REVIEW) {
       updateLabel = `npm ${line.npmUpdate.available} has open PR #${line.npmUpdate.pullRequest.number} targeting ${line.npmUpdate.ref}`;
-    } else if (line.npmUpdate?.status === "awaiting-main") {
-      updateLabel = `npm ${line.npmUpdate.available} awaiting main integration`;
-    } else if (line.npmUpdate?.status === "backport") {
-      updateLabel = `npm ${line.npmUpdate.available} backport available`;
+    } else if (updateState === NPM_RELEASE_STATES.AWAITING_NODE_PR) {
+      updateLabel = line.npmUpdate.ref === "main"
+        ? `npm ${line.npmUpdate.available} awaiting main integration`
+        : `npm ${line.npmUpdate.available} backport available`;
     }
-    const npmUpdate = line.npmUpdate?.status === "open-pr"
+    const npmUpdate = updateState === NPM_RELEASE_STATES.NODE_PR_REVIEW
       ? `<span class="update-note">npm ${escapeHtml(line.npmUpdate.available)} has open <a href="${escapeHtml(line.npmUpdate.pullRequest.url)}">PR #${line.npmUpdate.pullRequest.number}</a> targeting ${escapeHtml(line.npmUpdate.ref)}</span>`
       : updateLabel
-        ? `<span class="update-note ${line.npmUpdate.status === "staged" ? "staged" : ""}">${escapeHtml(updateLabel)}</span>`
+        ? `<span class="update-note ${updateState === NPM_RELEASE_STATES.NODE_MERGED ? "staged" : ""}">${escapeHtml(updateLabel)}</span>`
         : "";
 
     return `
@@ -192,6 +246,7 @@ async function init() {
       document.querySelector("#source-link").hidden = true;
     }
 
+    renderPendingReleases(snapshot.npm.pendingReleases ?? []);
     renderNpmStatus(snapshot.npm);
     renderNpmMajorStatus(snapshot.npm.unbundledNewerMajors);
     render();

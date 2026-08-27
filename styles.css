@@ -155,6 +155,27 @@ h1 span {
   margin-bottom: 0;
 }
 
+.pull-request-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+}
+
+.pull-request-list li {
+  align-items: baseline;
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 0.9rem;
+  gap: 7px;
+}
+
+.pull-request-list span {
+  color: var(--muted);
+}
+
 .controls {
   align-items: center;
   display: flex;

@@ -5,9 +5,10 @@ A dependency-free GitHub Pages dashboard mapping every published Node.js release
 - [Node.js release index](https://nodejs.org/dist/index.json)
 - [Official Node.js release schedule](https://github.com/nodejs/Release/blob/main/schedule.json)
 - [npm packument](https://registry.npmjs.org/npm)
+- open [npm CLI release pull requests](https://github.com/npm/cli/pulls)
 - npm versions in maintained `nodejs/node` release, staging, and `main` branches
 
-The dashboard hides end-of-life Node.js lines by default, distinguishes open npm update PRs and updates already queued on Node.js staging branches from updates that still need integration, and highlights newer npm majors that have not shipped in a published Node.js release.
+The dashboard hides end-of-life Node.js lines by default, lists pending npm releases and backports before publication, distinguishes open npm update PRs and updates already merged into Node.js branches from updates that still need integration, and highlights newer npm majors that have not shipped in a published Node.js release.
 
 ## npm release pipeline
 
@@ -36,7 +37,7 @@ The first two stages are owned by the npm team; the remaining stages are owned b
    gh workflow run create-node-pr.yml -R npm/cli -f spec=next-10 -f branch=22
    ```
 
-Run `node scripts/generate-data.mjs` to regenerate both the self-contained `index.html` and the reusable `data/versions.json` snapshot. The generated HTML embeds its data, styles, and JavaScript, so it can be opened directly without a web server.
+Run `node scripts/generate-data.mjs` to build the self-contained `dist/index.html` dashboard and reusable `dist/data/versions.json` snapshot. The generated HTML embeds its data, styles, and JavaScript, so it can be opened directly without a web server. The entire `dist/` directory is generated and intentionally excluded from Git.
 
 ## Deploy
 
