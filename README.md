@@ -46,3 +46,9 @@ Run `node scripts/generate-data.mjs` to build the self-contained `dist/index.htm
 3. Run **Deploy daily version map** or wait for the next push/scheduled run.
 
 The workflow deploys on every push to `main`, on manual dispatch, and daily at 06:17 UTC.
+
+Trigger an immediate dashboard refresh and deployment:
+
+```sh
+gh workflow run pages.yml -R reggi/node-npm-release-map
+```
