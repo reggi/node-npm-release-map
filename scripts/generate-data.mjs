@@ -310,17 +310,16 @@ const repository = process.env.GITHUB_REPOSITORY;
 const repositoryAttribute = repository ? ` data-repository="${repository}"` : "";
 const embeddedSnapshot = JSON.stringify(snapshot).replaceAll("<", "\\u003c");
 const plausibleDomain = process.env.PLAUSIBLE_DOMAIN;
-const plausibleScript = plausibleDomain
-  ? `<script defer data-domain="${plausibleDomain}" src="https://plausible.io/js/script.js"></script>`
-  : "";
 const html = template
   .replace("<html lang=\"en\">", `<html lang="en"${repositoryAttribute}>`)
   .replace("__STYLES__", styles)
   .replace("__VERSION_DATA__", embeddedSnapshot)
   .replace("__APP_SCRIPT__", appScript.replaceAll("</script", "<\\/script"))
   .replace(
-    `<script defer data-domain="__PLAUSIBLE_DOMAIN__" src="https://plausible.io/js/script.js"></script>`,
-    plausibleScript,
+    /<script[^>]*data-domain="__PLAUSIBLE_DOMAIN__"[^>]*><\/script>\n?/,
+    plausibleDomain
+      ? `<script defer data-domain="${plausibleDomain}" src="https://plausible.io/js/script.js"></script>\n`
+      : "",
   );
 
 await mkdir(dirname(htmlPath), { recursive: true });
