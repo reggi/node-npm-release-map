@@ -29,6 +29,8 @@ jobs:
           node-version: 22
 
       - name: Build daily snapshot
+        env:
+          PLAUSIBLE_DOMAIN: ${{ secrets.PLAUSIBLE_DOMAIN }}
         run: |
           mkdir -p dist
           node scripts/generate-data.mjs \
