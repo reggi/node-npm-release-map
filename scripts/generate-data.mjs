@@ -6,7 +6,8 @@ const NPM_PACKUMENT_URL = "https://registry.npmjs.org/npm";
 const NODE_SCHEDULE_URL = "https://raw.githubusercontent.com/nodejs/Release/main/schedule.json";
 const NODE_REPOSITORY_RAW_URL = "https://raw.githubusercontent.com/nodejs/node";
 const GITHUB_API_URL = "https://api.github.com";
-const NPM_CLI_PULLS_URL = `${GITHUB_API_URL}/repos/npm/cli/pulls?state=open&per_page=100`;
+const NPM_CLI_PULLS_PER_PAGE = 100;
+const NPM_CLI_PULLS_URL = `${GITHUB_API_URL}/repos/npm/cli/pulls?state=open&per_page=${NPM_CLI_PULLS_PER_PAGE}`;
 
 const NPM_RELEASE_STATES = Object.freeze({
   NPM_RELEASE_PR: "npm-release-pr",
@@ -68,7 +69,13 @@ async function fetchBundledNpm(ref) {
 }
 
 async function fetchOpenNpmCliPulls() {
-  return fetchJson(NPM_CLI_PULLS_URL);
+  const pulls = [];
+  for (let page = 1; ; page += 1) {
+    const batch = await fetchJson(`${NPM_CLI_PULLS_URL}&page=${page}`);
+    pulls.push(...batch);
+    if (batch.length < NPM_CLI_PULLS_PER_PAGE) break;
+  }
+  return pulls;
 }
 
 function extractPendingReleases(pulls) {
