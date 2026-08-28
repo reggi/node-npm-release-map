@@ -49,8 +49,8 @@ function renderNpmStatus(npm) {
   if (pending.length) {
     const pendingText = pending
       .map((update) => update.kind === "integration"
-        ? `npm ${update.available} for Node.js main`
-        : `npm ${update.available} backport for Node.js ${update.target}`)
+        ? `npm@${update.available} for Node.js main`
+        : `npm@${update.available} backport for Node.js ${update.target}`)
       .join("; ");
 
     status.className = "npm-status callout";
@@ -68,8 +68,8 @@ function renderNpmStatus(npm) {
     const pullRequests = openPullRequests
       .map((pull) =>
         `<li>
-          <a href="${escapeHtml(pull.url)}">nodejs/node#${pull.number}</a>
-          <span>— updates npm to ${escapeHtml(pull.version)} on <code>${escapeHtml(pull.base)}</code></span>
+          <a href="${escapeHtml(pull.url)}" target="_blank" rel="noopener noreferrer">nodejs/node#${pull.number}</a>
+          <span>— updates to npm@${escapeHtml(pull.version)} on <code>${escapeHtml(pull.base)}</code></span>
         </li>`)
       .join("");
     status.className = "npm-status callout";
@@ -104,11 +104,11 @@ function renderPendingReleases(pendingReleases) {
 
   const releases = pendingReleases.map((release) => {
     const action = release.releaseType === "backport"
-      ? `prepares npm ${release.version} as a backport from ${release.target}`
-      : `prepares npm ${release.version} from ${release.target}`;
+      ? `prepares npm@${release.version} as a backport from ${release.target}`
+      : `prepares npm@${release.version} from ${release.target}`;
     return `
       <li>
-        <a href="${escapeHtml(release.pullRequest.url)}">npm/cli#${release.pullRequest.number}</a>
+        <a href="${escapeHtml(release.pullRequest.url)}" target="_blank" rel="noopener noreferrer">npm/cli#${release.pullRequest.number}</a>
         <span>— ${escapeHtml(action)}</span>
       </li>`;
   }).join("");
@@ -145,8 +145,8 @@ function renderPendingBackports(pendingBackports) {
       const searchUrl = `https://github.com/npm/cli/pulls?q=${encodeURIComponent(`is:pr is:open base:${target}`)}`;
       return `
     <li>
-      <span>npm@${escapeHtml(major)} has ${escapeHtml(count)} open backport ${count === 1 ? "pr" : "prs"}</span>
-      <a href="${escapeHtml(searchUrl)}">search</a>
+      <a href="${escapeHtml(searchUrl)}" target="_blank" rel="noopener noreferrer">npm@${escapeHtml(major)} backport PRs</a>
+      <span>— list of all ${escapeHtml(count)} open backport pull ${count === 1 ? "request" : "requests"}</span>
     </li>`;
     })
     .join("");
@@ -156,6 +156,9 @@ function renderPendingBackports(pendingBackports) {
     <div class="status-icon">↗</div>
     <div>
       <p class="status-label">Pending npm backports</p>
+      <h2>${pendingBackports.length === 1
+        ? "An npm backport PR is open in npm/cli"
+        : `${pendingBackports.length} npm backport PRs are open in npm/cli`}</h2>
       <ul class="pull-request-list">${items}</ul>
     </div>`;
 }
@@ -166,13 +169,14 @@ function renderNpmMajorStatus(missing) {
     return;
   }
 
-  const versions = missing.map(({ latest }) => `npm ${latest}`).join(", ");
+  const versions = missing.map(({ latest }) => `npm@${latest}`).join(", ");
   majorStatus.hidden = false;
   majorStatus.innerHTML = `
     <div class="status-icon">!</div>
     <div>
-    <p class="status-label">Unbundled npm major</p>
-    <h2>${escapeHtml(versions)} ${missing.length === 1 ? "is" : "are"} not bundled with Node.js yet</h2>
+      <p class="status-label">Unbundled npm major</p>
+      <h2>${escapeHtml(versions)} ${missing.length === 1 ? "is" : "are"} not bundled with Node.js yet</h2>
+      <p>Node.js has not published a release containing ${missing.length === 1 ? "this npm major" : "these npm majors"}.</p>
     </div>`;
 }
 
@@ -207,22 +211,22 @@ function render() {
     const rows = line.releases.map((release) => `
       <div class="release-row">
         <span>Node.js ${escapeHtml(release.node)}</span>
-        <span>npm ${escapeHtml(release.npm ?? "not bundled")}</span>
+        <span>${release.npm ? `npm@${escapeHtml(release.npm)}` : "npm not bundled"}</span>
         <time datetime="${escapeHtml(release.date)}">${formatDate(release.date)}</time>
       </div>`).join("");
     const updateState = getNpmUpdateState(line.npmUpdate);
     let updateLabel = "";
     if (updateState === NPM_RELEASE_STATES.NODE_MERGED) {
-      updateLabel = `npm ${line.npmUpdate.available} is merged into ${line.npmUpdate.ref} for a future Node.js release`;
+      updateLabel = `npm@${line.npmUpdate.available} is merged into ${line.npmUpdate.ref} for a future Node.js release`;
     } else if (updateState === NPM_RELEASE_STATES.NODE_PR_REVIEW) {
-      updateLabel = `npm ${line.npmUpdate.available} has open PR #${line.npmUpdate.pullRequest.number} targeting ${line.npmUpdate.ref}`;
+      updateLabel = `npm@${line.npmUpdate.available} has open PR #${line.npmUpdate.pullRequest.number} targeting ${line.npmUpdate.ref}`;
     } else if (updateState === NPM_RELEASE_STATES.AWAITING_NODE_PR) {
       updateLabel = line.npmUpdate.ref === "main"
-        ? `npm ${line.npmUpdate.available} awaiting main integration`
-        : `npm ${line.npmUpdate.available} backport available`;
+        ? `npm@${line.npmUpdate.available} awaiting main integration`
+        : `npm@${line.npmUpdate.available} backport available`;
     }
     const npmUpdate = updateState === NPM_RELEASE_STATES.NODE_PR_REVIEW
-      ? `<span class="update-note">npm ${escapeHtml(line.npmUpdate.available)} has open <a href="${escapeHtml(line.npmUpdate.pullRequest.url)}">PR #${line.npmUpdate.pullRequest.number}</a> targeting ${escapeHtml(line.npmUpdate.ref)}</span>`
+      ? `<span class="update-note">npm@${escapeHtml(line.npmUpdate.available)} has open <a href="${escapeHtml(line.npmUpdate.pullRequest.url)}" target="_blank" rel="noopener noreferrer">PR #${line.npmUpdate.pullRequest.number}</a> targeting ${escapeHtml(line.npmUpdate.ref)}</span>`
       : updateLabel
         ? `<span class="update-note ${updateState === NPM_RELEASE_STATES.NODE_MERGED ? "staged" : ""}">${escapeHtml(updateLabel)}</span>`
         : "";
@@ -235,7 +239,7 @@ function render() {
             <div class="version-pair">
               <span class="node-version">${escapeHtml(line.latestNode)}</span>
               <span class="pair-arrow">→</span>
-              <span class="npm-version">npm ${escapeHtml(line.latestNpm ?? "—")}</span>
+              <span class="npm-version">${line.latestNpm ? `npm@${escapeHtml(line.latestNpm)}` : "npm —"}</span>
             </div>
             ${npmUpdate}
           </div>
