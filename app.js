@@ -131,30 +131,31 @@ function renderPendingBackports(pendingBackports) {
     return;
   }
 
-  const items = pendingBackports.map((backport) => `
-    <li>
-      <a href="${escapeHtml(backport.pullRequest.url)}">npm/cli#${escapeHtml(backport.pullRequest.number)}</a>
-      <span>— backports <a href="https://github.com/npm/cli/pull/${escapeHtml(backport.original)}">#${escapeHtml(backport.original)}</a> into <code>${escapeHtml(backport.target)}</code></span>
-    </li>`).join("");
+  const byMajor = new Map();
+  for (const backport of pendingBackports) {
+    const entry = byMajor.get(backport.major)
+      ?? { major: backport.major, target: backport.target, count: 0 };
+    entry.count += 1;
+    byMajor.set(backport.major, entry);
+  }
 
-  const subject = pendingBackports.length === 1 ? "this" : "these";
-  const allExistingRelease = pendingBackports.every((backport) => backport.hasReleasePr);
-  const someExistingRelease = pendingBackports.some((backport) => backport.hasReleasePr);
-  const action = allExistingRelease
-    ? `Approve and merge ${subject} to add to the existing release PR.`
-    : someExistingRelease
-      ? `Approve and merge ${subject} to add to the existing release PR, or auto-generate a new one where none exists yet.`
-      : `Approve and merge ${subject} to auto-generate a new release PR.`;
+  const items = [...byMajor.values()]
+    .sort((a, b) => b.major - a.major)
+    .map(({ major, target, count }) => {
+      const searchUrl = `https://github.com/npm/cli/pulls?q=${encodeURIComponent(`is:pr is:open base:${target}`)}`;
+      return `
+    <li>
+      <span>npm@${escapeHtml(major)} has ${escapeHtml(count)} open backport ${count === 1 ? "pr" : "prs"}</span>
+      <a href="${escapeHtml(searchUrl)}">search</a>
+    </li>`;
+    })
+    .join("");
 
   backportStatus.hidden = false;
   backportStatus.innerHTML = `
     <div class="status-icon">↗</div>
     <div>
       <p class="status-label">Pending npm backports</p>
-      <h2>${pendingBackports.length === 1
-        ? "A backport PR is open in npm/cli"
-        : `${pendingBackports.length} backport PRs are open in npm/cli`}</h2>
-      <p>${escapeHtml(action)}</p>
       <ul class="pull-request-list">${items}</ul>
     </div>`;
 }
