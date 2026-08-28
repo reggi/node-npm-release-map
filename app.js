@@ -2,6 +2,7 @@ const grid = document.querySelector("#release-grid");
 const hideEolInput = document.querySelector("#hide-eol");
 const status = document.querySelector("#npm-status");
 const releaseStatus = document.querySelector("#npm-release-status");
+const backportStatus = document.querySelector("#npm-backport-status");
 const majorStatus = document.querySelector("#npm-major-status");
 
 const NPM_RELEASE_STATES = Object.freeze({
@@ -121,6 +122,40 @@ function renderPendingReleases(pendingReleases) {
         ? "An npm release PR is open in npm/cli"
         : `${pendingReleases.length} npm release PRs are open in npm/cli`}</h2>
       <ul class="pull-request-list">${releases}</ul>
+    </div>`;
+}
+
+function renderPendingBackports(pendingBackports) {
+  if (!pendingBackports.length) {
+    backportStatus.hidden = true;
+    return;
+  }
+
+  const items = pendingBackports.map((backport) => `
+    <li>
+      <a href="${escapeHtml(backport.pullRequest.url)}">npm/cli#${escapeHtml(backport.pullRequest.number)}</a>
+      <span>— backports <a href="https://github.com/npm/cli/pull/${escapeHtml(backport.original)}">#${escapeHtml(backport.original)}</a> into <code>${escapeHtml(backport.target)}</code></span>
+    </li>`).join("");
+
+  const subject = pendingBackports.length === 1 ? "this" : "these";
+  const allExistingRelease = pendingBackports.every((backport) => backport.hasReleasePr);
+  const someExistingRelease = pendingBackports.some((backport) => backport.hasReleasePr);
+  const action = allExistingRelease
+    ? `Approve and merge ${subject} to add to the existing release PR.`
+    : someExistingRelease
+      ? `Approve and merge ${subject} to add to the existing release PR, or auto-generate a new one where none exists yet.`
+      : `Approve and merge ${subject} to auto-generate a new release PR.`;
+
+  backportStatus.hidden = false;
+  backportStatus.innerHTML = `
+    <div class="status-icon">↗</div>
+    <div>
+      <p class="status-label">Pending npm backports</p>
+      <h2>${pendingBackports.length === 1
+        ? "A backport PR is open in npm/cli"
+        : `${pendingBackports.length} backport PRs are open in npm/cli`}</h2>
+      <p>${escapeHtml(action)}</p>
+      <ul class="pull-request-list">${items}</ul>
     </div>`;
 }
 
@@ -247,6 +282,7 @@ async function init() {
     }
 
     renderPendingReleases(snapshot.npm.pendingReleases ?? []);
+    renderPendingBackports(snapshot.npm.pendingBackports ?? []);
     renderNpmStatus(snapshot.npm);
     renderNpmMajorStatus(snapshot.npm.unbundledNewerMajors);
     render();
