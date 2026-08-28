@@ -133,7 +133,7 @@ function renderPendingBackports(pendingBackports) {
 
   const items = pendingBackports.map((backport) => `
     <li>
-      <a href="${escapeHtml(backport.pullRequest.url)}">npm/cli#${backport.pullRequest.number}</a>
+      <a href="${escapeHtml(backport.pullRequest.url)}">npm/cli#${escapeHtml(backport.pullRequest.number)}</a>
       <span>— backports <a href="https://github.com/npm/cli/pull/${escapeHtml(backport.original)}">#${escapeHtml(backport.original)}</a> into <code>${escapeHtml(backport.target)}</code></span>
     </li>`).join("");
 
