@@ -67,8 +67,11 @@ async function fetchBundledNpm(ref) {
   return packageJson.version;
 }
 
-async function fetchOpenNpmReleasePulls() {
-  const pulls = await fetchJson(NPM_CLI_PULLS_URL);
+async function fetchOpenNpmCliPulls() {
+  return fetchJson(NPM_CLI_PULLS_URL);
+}
+
+function extractPendingReleases(pulls) {
   return pulls
     .map((pull) => {
       const hasPendingLabel = pull.labels.some(
@@ -108,6 +111,38 @@ async function fetchOpenNpmReleasePulls() {
     );
 }
 
+function extractPendingBackports(pulls, pendingReleases) {
+  const releaseTargets = new Set(
+    pendingReleases
+      .filter((release) => release.releaseType === "backport")
+      .map((release) => release.target),
+  );
+
+  return pulls
+    .map((pull) => {
+      const head = pull.head.ref.match(/^backport\/v(\d+)\/(\d+)$/);
+      const base = pull.base.ref.match(/^release\/v(\d+)$/);
+
+      if (!head || !base || head[1] !== base[1]) return null;
+
+      return {
+        major: Number(base[1]),
+        original: Number(head[2]),
+        target: pull.base.ref,
+        hasReleasePr: releaseTargets.has(pull.base.ref),
+        pullRequest: {
+          number: pull.number,
+          title: pull.title,
+          url: pull.html_url,
+          createdAt: pull.created_at,
+          updatedAt: pull.updated_at,
+        },
+      };
+    })
+    .filter(Boolean)
+    .sort((a, b) => b.major - a.major || b.original - a.original);
+}
+
 async function fetchOpenNpmUpgradePulls() {
   const query = encodeURIComponent(
     'repo:nodejs/node is:pr is:open label:npm in:title "deps: upgrade npm to"',
@@ -144,12 +179,14 @@ const htmlPath = resolve(
   htmlArgument === -1 ? "dist/index.html" : process.argv[htmlArgument + 1],
 );
 
-const [nodeReleases, npmPackument, releaseSchedule, pendingReleases] = await Promise.all([
+const [nodeReleases, npmPackument, releaseSchedule, npmCliPulls] = await Promise.all([
   fetchJson(NODE_INDEX_URL),
   fetchJson(NPM_PACKUMENT_URL),
   fetchJson(NODE_SCHEDULE_URL),
-  fetchOpenNpmReleasePulls(),
+  fetchOpenNpmCliPulls(),
 ]);
+const pendingReleases = extractPendingReleases(npmCliPulls);
+const pendingBackports = extractPendingBackports(npmCliPulls, pendingReleases);
 
 const today = new Date().toISOString().slice(0, 10);
 const lifecycleByCycle = new Map(
@@ -361,6 +398,7 @@ const snapshot = {
     maxBundledMajor,
     bundledMajors: [...bundledNpmMajors].sort((a, b) => b - a),
     pendingReleases,
+    pendingBackports,
     pendingNodeUpdates,
     openNodeUpdates,
     stagedNodeUpdates,
