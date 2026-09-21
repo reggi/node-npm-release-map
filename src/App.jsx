@@ -382,11 +382,11 @@ function ReleaseLine({ line }) {
         </Box>
         <Box>
           <Text className="cell-label">Lifecycle</Text>
-          <Text>{eol}</Text>
+          <Text className="cell-value">{eol}</Text>
         </Box>
         <Box>
           <Text className="cell-label">Published releases</Text>
-          <Text>{line.releases.length}</Text>
+          <Text className="cell-value">{line.releases.length}</Text>
         </Box>
         <Label
           className={`lifecycle-label ${
