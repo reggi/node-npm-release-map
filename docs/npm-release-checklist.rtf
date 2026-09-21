@@ -11,7 +11,7 @@ Checked and clear means the check ran and found no work.\par
 Open means a pull request or backport needs review.\par
 Needs action means a newer npm release exists but no Node.js integration pull request was found.\par
 In review means a Node.js integration pull request is open.\par
-Merged means the npm update is on a Node.js branch and is waiting for a published Node.js release.\par
+Merged* means the npm update is on a Node.js branch but has not shipped yet. When that branch next publishes a Node.js release, the npm version will be included.\par
 Unbundled means an npm major has not shipped in Node.js and may require a release team decision.\par
 \par
 \fs32\b 1. Check for a pending npm release\b0\fs24\par
@@ -34,7 +34,7 @@ Query: is:pr is:open backport\f0\par
 \b What this checks:\b0  The latest registry release for npm@10, npm@11, and npm@12 compared with every maintained Node.js branch that carries each major.\par
 \b Published:\b0  The latest npm version is included in a published Node.js release.\par
 \b Current:\b0  The latest npm version is present on Node.js main.\par
-\b Merged:\b0  The latest npm version is on a Node.js release or staging branch and is waiting for a published Node.js release.\par
+\b Merged*:\b0  The latest npm version is on a Node.js release or staging branch but has not shipped yet. When that branch next publishes a Node.js release, the npm version will be included.\par
 \b In review:\b0  A matching Node.js integration pull request is open.\par
 \b Needs action:\b0  A newer npm release is available, but no Node.js integration pull request was found.\par
 \b No Node.js branch assigned:\b0  The npm major is available, but no maintained Node.js branch carries it yet.\par

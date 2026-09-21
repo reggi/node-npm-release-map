@@ -72,6 +72,21 @@ function VersionBadge({ product, version }) {
   return <span className={`version-badge ${product}`}>{label}</span>;
 }
 
+function BranchReference({ repository, branch }) {
+  const product = repository === "nodejs/node" ? "node" : "npm";
+  return (
+    <Link
+      className={`branch-reference ${product}`}
+      href={`https://github.com/${repository}/tree/${encodeURIComponent(branch)}`}
+      target="_blank"
+      rel="noreferrer"
+    >
+      <GitBranchIcon size={12} />
+      {repository}#{branch}
+    </Link>
+  );
+}
+
 function getNpmUpdateState(update) {
   if (update?.state) return update.state;
   if (["staged", "release-branch"].includes(update?.status)) {
@@ -276,7 +291,9 @@ function BranchState({ snapshot }) {
         <Text>
           This page answers which Node.js branches contain each npm major.
           Published means users can receive the version in a Node.js release.
-          Merged means it is on a branch but has not shipped yet.
+          Merged* means it is on a branch but has not shipped yet. When that
+          Node.js branch next publishes a release, the npm version will be
+          included.
         </Text>
       </Box>
 
@@ -322,7 +339,8 @@ function ReleaseLine({ line }) {
     updateNote = (
       <>
         <VersionBadge product="npm" version={line.npmUpdate.available} /> is
-        merged into <code>{line.npmUpdate.ref}</code>
+        merged into{" "}
+        <BranchReference repository="nodejs/node" branch={line.npmUpdate.ref} />
       </>
     );
   } else if (updateState === NPM_RELEASE_STATES.NODE_PR_REVIEW) {
@@ -466,7 +484,7 @@ function buildReleaseChecks(npm) {
         detail: (
           <>
             <VersionBadge product="npm" version={release.version} /> release from{" "}
-            <code>{release.target}</code>
+            <BranchReference repository="npm/cli" branch={release.target} />
           </>
         ),
       })),
@@ -496,7 +514,7 @@ function buildReleaseChecks(npm) {
           detail: (
             <>
               {count} open {count === 1 ? "pull request" : "pull requests"}{" "}
-              targeting <code>{target}</code>
+              targeting <BranchReference repository="npm/cli" branch={target} />
             </>
           ),
         })),
@@ -610,7 +628,7 @@ function ReleaseCheck({ check, number, isLast }) {
 const branchStatus = {
   published: { label: "Published", variant: "success" },
   current: { label: "Current", variant: "success" },
-  merged: { label: "Merged", variant: "accent" },
+  merged: { label: "Merged*", variant: "accent" },
   "in-review": { label: "In review", variant: "attention" },
   "needs-action": { label: "Needs action", variant: "danger" },
 };
@@ -656,11 +674,10 @@ function MajorTrackingMatrix({ majors }) {
                     key={`${item.major}-${branch.releaseRef}`}
                   >
                     <Box>
-                      <VersionBadge
-                        product="node"
-                        version={branch.nodeCycle ?? "main"}
+                      <BranchReference
+                        repository="nodejs/node"
+                        branch={branch.releaseRef}
                       />
-                      <Text className="branch-ref">{branch.releaseRef}</Text>
                     </Box>
                     <Box>
                       <Text className="branch-label">
@@ -682,7 +699,10 @@ function MajorTrackingMatrix({ majors }) {
                     <Box>
                       <Text className="branch-label">Latest on branch</Text>
                       <Box className="version-pair">
-                        <code>{branch.stagingRef ?? branch.releaseRef}</code>
+                        <BranchReference
+                          repository="nodejs/node"
+                          branch={branch.stagingRef ?? branch.releaseRef}
+                        />
                         <VersionBadge
                           product="npm"
                           version={branch.stagingNpm ?? branch.releaseNpm}
@@ -720,6 +740,12 @@ function MajorTrackingMatrix({ majors }) {
 
 function BranchProvenance({ branch }) {
   const links = [
+    branch.status === "published" && branch.publishedNode
+      ? {
+          label: "View release artifact",
+          href: `https://github.com/nodejs/node/blob/${encodeURIComponent(branch.publishedNode)}/deps/npm/package.json`,
+        }
+      : null,
     branch.pullRequest
       ? {
           label: `PR #${branch.pullRequest.number}`,

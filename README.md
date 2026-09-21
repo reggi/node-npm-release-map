@@ -65,7 +65,7 @@ Each branch can show:
 
 1. **Published:** The latest npm version is included in a published Node.js release.
 2. **Current:** The latest npm version is present on Node.js `main`.
-3. **Merged:** The latest npm version is on a release or staging branch and is waiting for a published Node.js release.
+3. **Merged*:** The latest npm version is on a Node.js release or staging branch but has not shipped yet. When that branch next publishes a Node.js release, the npm version will be included.
 4. **In review:** A matching Node.js integration pull request is open.
 5. **Needs action:** A newer npm release is available, but no Node.js integration pull request was found.
 6. **No Node.js branch assigned:** The npm major is available but no maintained Node.js branch carries it.
