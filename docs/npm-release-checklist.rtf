@@ -1,0 +1,67 @@
+{\rtf1\ansi\deff0
+{\fonttbl{\f0 Aptos;}{\f1 Courier New;}}
+\paperw12240\paperh15840\margl1080\margr1080\margt1080\margb1080
+\f0\fs44\b Node.js to npm Release Checklist\b0\fs24\par
+\par
+\b Purpose\b0\par
+Use this checklist to follow an npm release into Node.js. Read it from top to bottom. The live dashboard runs the same checks automatically, but the manual process remains visible so a release engineer can verify every result.\par
+\par
+\b How to read a result\b0\par
+Checked and clear means the check ran and found no work.\par
+Open means a pull request or backport needs review.\par
+Needs action means a newer npm release exists but no Node.js integration pull request was found.\par
+In review means a Node.js integration pull request is open.\par
+Merged means the npm update is on a Node.js branch and is waiting for a published Node.js release.\par
+Unbundled means an npm major has not shipped in Node.js and may require a release team decision.\par
+\par
+\fs32\b 1. Check for a pending npm release\b0\fs24\par
+\b What this checks:\b0  Open Release Please pull requests in npm/cli.\par
+\b If a result appears:\b0  npm publication is still in progress. Open the pull request and confirm whether it is ready to merge or waiting on additional work.\par
+\b If the result is clear:\b0  No open pending npm release pull request was found.\par
+\b Manual search:\b0\par
+\f1 Repository: https://github.com/npm/cli/pulls\par
+Query: is:pr is:open label:"autorelease: pending"\f0\par
+\par
+\fs32\b 2. Check npm backport work\b0\fs24\par
+\b What this checks:\b0  Open pull requests related to backports for maintained npm release branches.\par
+\b If a result appears:\b0  Inspect the source and target branches. Required backports should be merged before the matching npm release is prepared.\par
+\b If the result is clear:\b0  No open npm backport work was found.\par
+\b Manual search:\b0\par
+\f1 Repository: https://github.com/npm/cli/pulls\par
+Query: is:pr is:open backport\f0\par
+\par
+\fs32\b npm to Node.js tab: branch state reference\b0\fs24\par
+\b What this checks:\b0  The latest registry release for npm@10, npm@11, and npm@12 compared with every maintained Node.js branch that carries each major.\par
+\b Published:\b0  The latest npm version is included in a published Node.js release.\par
+\b Current:\b0  The latest npm version is present on Node.js main.\par
+\b Merged:\b0  The latest npm version is on a Node.js release or staging branch and is waiting for a published Node.js release.\par
+\b In review:\b0  A matching Node.js integration pull request is open.\par
+\b Needs action:\b0  A newer npm release is available, but no Node.js integration pull request was found.\par
+\b No Node.js branch assigned:\b0  The npm major is available, but no maintained Node.js branch carries it yet.\par
+\b Manual search:\b0\par
+\f1 Search: https://github.com/search?type=pullrequests\par
+Query: repo:nodejs/node is:pr is:open label:npm in:title "deps: upgrade npm to"\f0\par
+\par
+\b Create the Node.js integration pull request after npm is published:\b0\par
+\f1 gh workflow run create-node-pr.yml -R npm/cli -f spec=next-11\f0\par
+\par
+\b Create a pull request for an older npm major used by an LTS Node.js line:\b0\par
+\f1 gh workflow run create-node-pr.yml -R npm/cli -f spec=next-10 -f branch=22\f0\par
+\par
+When the same npm version is used by Node.js main and multiple maintained Node.js lines, create the pull request targeting main only.\par
+\par
+\fs32\b Node.js to npm tab: confirm what shipped\b0\fs24\par
+Use the version map after the two release checks. It shows the latest Node.js to npm mapping for every Node.js release line. Expand a line to inspect every published release and the npm version bundled with it.\par
+\par
+End of life Node.js lines are hidden by default. Show them when historical release information is needed.\par
+\par
+\b Release flow summary\b0\par
+1. Release Please opens or updates the npm release pull request.\par
+2. The npm release pull request is merged and npm is published.\par
+3. The npm team creates a Node.js integration pull request.\par
+4. The Node.js integration pull request is reviewed and merged.\par
+5. A published Node.js release bundles the npm version.\par
+\par
+\b Important\b0\par
+The automated snapshot is a release aid. It does not replace reviewing the linked pull requests, confirming branch targets, or making release team decisions for new npm majors.\par
+}
