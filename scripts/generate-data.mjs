@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 
 const NODE_INDEX_URL = "https://nodejs.org/dist/index.json";
@@ -18,8 +18,12 @@ const NPM_RELEASE_STATES = Object.freeze({
 });
 
 async function fetchJson(url) {
+  const headers = { "user-agent": "node-npm-versions-pages/1.0" };
+  if (process.env.GITHUB_TOKEN && url.startsWith(GITHUB_API_URL)) {
+    headers.authorization = `Bearer ${process.env.GITHUB_TOKEN}`;
+  }
   const response = await fetch(url, {
-    headers: { "user-agent": "node-npm-versions-pages/1.0" },
+    headers,
   });
   if (!response.ok) {
     throw new Error(`${url} returned ${response.status} ${response.statusText}`);
@@ -177,13 +181,52 @@ async function fetchOpenNpmUpgradePulls() {
   }));
 }
 
+async function fetchMergedUpdateProvenance(ref, version) {
+  const params = new URLSearchParams({
+    sha: ref,
+    path: "deps/npm/package.json",
+    per_page: "100",
+  });
+  const commits = await fetchJson(
+    `${GITHUB_API_URL}/repos/nodejs/node/commits?${params}`,
+  );
+  const escapedVersion = version.replaceAll(".", "\\.");
+  const versionPattern = new RegExp(
+    `deps: upgrade npm to v?${escapedVersion}(?:\\s|$)`,
+    "i",
+  );
+  const commit = commits.find(({ commit: details }) =>
+    versionPattern.test(details.message),
+  );
+  if (!commit) return null;
+
+  const pullRequestMatch =
+    commit.commit.message.match(
+      /^PR-URL:\s+https:\/\/github\.com\/nodejs\/node\/pull\/(\d+)$/im,
+    )
+    ?? commit.commit.message.match(/\(#(\d+)\)(?:\s|$)/);
+  const pullRequestNumber = pullRequestMatch
+    ? Number(pullRequestMatch[1])
+    : null;
+
+  return {
+    commit: {
+      sha: commit.sha,
+      shortSha: commit.sha.slice(0, 12),
+      url: commit.html_url,
+    },
+    pullRequest: pullRequestNumber
+      ? {
+          number: pullRequestNumber,
+          url: `https://github.com/nodejs/node/pull/${pullRequestNumber}`,
+        }
+      : null,
+  };
+}
+
 const outputArgument = process.argv.indexOf("--output");
 const outputPath = resolve(
-  outputArgument === -1 ? "dist/data/versions.json" : process.argv[outputArgument + 1],
-);
-const htmlArgument = process.argv.indexOf("--html");
-const htmlPath = resolve(
-  htmlArgument === -1 ? "dist/index.html" : process.argv[htmlArgument + 1],
+  outputArgument === -1 ? "public/data/versions.json" : process.argv[outputArgument + 1],
 );
 
 const [nodeReleases, npmPackument, releaseSchedule, npmCliPulls] = await Promise.all([
@@ -384,6 +427,93 @@ for (const line of maintainedLines) {
   });
 }
 
+await Promise.all(
+  mergedNodeUpdates.map(async (update) => {
+    update.provenance = await fetchMergedUpdateProvenance(
+      update.ref,
+      update.available,
+    );
+  }),
+);
+
+const trackedNpmMajors = [12, 11, 10].map((major) => {
+  const latest = npmLatestByMajor.get(major) ?? null;
+  const branches = maintainedLines
+    .filter((line) => versionParts(line.latestNpm)?.[0] === major)
+    .map((line) => {
+      const branchNpm = line.branchNpm;
+      const pullRequest = openNpmUpgradePulls.find(
+        (pull) =>
+          [branchNpm.releaseRef, branchNpm.stagingRef].includes(pull.base)
+          && latest
+          && compareVersions(pull.version, latest) >= 0,
+      );
+      const mergedUpdate = mergedNodeUpdates.find(
+        (update) =>
+          update.nodeCycle === line.cycle
+          && latest
+          && compareVersions(update.available, latest) >= 0,
+      );
+
+      let status = "needs-action";
+      if (latest && compareVersions(line.latestNpm, latest) >= 0) {
+        status = "published";
+      } else if (
+        latest
+        && (
+          compareVersions(branchNpm.release, latest) >= 0
+          || compareVersions(branchNpm.staging, latest) >= 0
+        )
+      ) {
+        status = "merged";
+      } else if (pullRequest) {
+        status = "in-review";
+      }
+
+      return {
+        nodeCycle: line.cycle,
+        label: `Node.js ${line.cycle}`,
+        publishedNode: line.latestNode,
+        publishedNpm: line.latestNpm,
+        releaseRef: branchNpm.releaseRef,
+        releaseNpm: branchNpm.release,
+        stagingRef: branchNpm.stagingRef,
+        stagingNpm: branchNpm.staging,
+        status,
+        pullRequest: pullRequest ?? null,
+        provenance: mergedUpdate?.provenance ?? null,
+      };
+    });
+
+  if (mainNpmMajor === major) {
+    branches.unshift({
+      nodeCycle: null,
+      label: "Node.js main",
+      publishedNode: null,
+      publishedNpm: null,
+      releaseRef: "main",
+      releaseNpm: mainNpm,
+      stagingRef: null,
+      stagingNpm: null,
+      status:
+        latest && compareVersions(mainNpm, latest) >= 0
+          ? "current"
+          : mainPullRequest
+            ? "in-review"
+            : "needs-action",
+      pullRequest: mainPullRequest,
+      provenance: null,
+    });
+  }
+
+  return {
+    major,
+    latest,
+    status: branches.length ? "tracked" : "unassigned",
+    branches,
+  };
+});
+
 const unbundledNewerMajors = [...npmLatestByMajor.entries()]
   .filter(([major]) => major > maxBundledMajor && major <= latestNpmMajor)
   .sort(([a], [b]) => a - b)
@@ -410,6 +540,7 @@ const snapshot = {
     openNodeUpdates,
     stagedNodeUpdates,
     mergedNodeUpdates,
+    trackedMajors: trackedNpmMajors,
     unbundledNewerMajors,
   },
   lines,
@@ -418,23 +549,6 @@ const snapshot = {
 await mkdir(dirname(outputPath), { recursive: true });
 await writeFile(outputPath, `${JSON.stringify(snapshot, null, 2)}\n`);
 
-const [template, styles, appScript] = await Promise.all([
-  readFile(resolve("index.template.html"), "utf8"),
-  readFile(resolve("styles.css"), "utf8"),
-  readFile(resolve("app.js"), "utf8"),
-]);
-const repository = process.env.GITHUB_REPOSITORY;
-const repositoryAttribute = repository ? ` data-repository="${repository}"` : "";
-const embeddedSnapshot = JSON.stringify(snapshot).replaceAll("<", "\\u003c");
-const html = template
-  .replace("<html lang=\"en\">", `<html lang="en"${repositoryAttribute}>`)
-  .replace("__STYLES__", styles)
-  .replace("__VERSION_DATA__", embeddedSnapshot)
-  .replace("__APP_SCRIPT__", appScript.replaceAll("</script", "<\\/script"));
-
-await mkdir(dirname(htmlPath), { recursive: true });
-await writeFile(htmlPath, html);
-
 console.log(
-  `Generated ${htmlPath} and ${outputPath} with ${nodeReleases.length} Node.js releases.`,
+  `Generated ${outputPath} with ${nodeReleases.length} Node.js releases.`,
 );
