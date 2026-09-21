@@ -282,7 +282,15 @@ function BranchState({ snapshot }) {
       <PageIntro
         eyebrow="Current branch state"
         title="npm → Node.js"
-        description="Start with npm@10, npm@11, or npm@12 and see every maintained Node.js branch that currently carries it. This is current internal state, not a release checklist."
+        description={
+          <>
+            Start with <VersionBadge product="npm" version="10" />,{" "}
+            <VersionBadge product="npm" version="11" />, or{" "}
+            <VersionBadge product="npm" version="12" /> and see every maintained
+            Node.js branch that currently carries it. This is current internal
+            state, not a release checklist.
+          </>
+        }
         visual={SyncIcon}
       />
 
