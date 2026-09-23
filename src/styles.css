@@ -280,6 +280,17 @@ a {
   color: #e6edf3 !important;
 }
 
+.table-header > span:last-child {
+  text-align: right;
+}
+
+.release-line summary > .lifecycle-label {
+  display: inline-flex;
+  justify-self: end;
+  text-align: right;
+  width: max-content;
+}
+
 .release-line {
   border-bottom: 1px solid var(--border);
 }
@@ -725,12 +736,35 @@ a {
   align-items: center;
   background: var(--canvas);
   cursor: pointer;
-  display: flex;
+  display: grid;
   font-size: 13px;
   font-weight: 600;
   gap: 16px;
-  justify-content: space-between;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  list-style: none;
   padding: 13px 16px;
+}
+
+.major-integration-details summary::-webkit-details-marker {
+  display: none;
+}
+
+.major-integration-details summary::before {
+  border-bottom: 5px solid transparent;
+  border-left: 7px solid var(--accent);
+  border-top: 5px solid transparent;
+  content: "";
+  transition: transform 120ms ease;
+}
+
+.major-integration-details summary > span:first-of-type {
+  color: var(--text) !important;
+  line-height: 1.4;
+  min-width: 0;
+}
+
+.major-integration-details[open] summary::before {
+  transform: rotate(90deg);
 }
 
 .major-integration-details summary:hover {
