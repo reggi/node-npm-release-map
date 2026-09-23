@@ -78,6 +78,18 @@ function formatGeneratedAt(value) {
   }).format(new Date(value));
 }
 
+function formatLocalGeneratedAt(value) {
+  return new Intl.DateTimeFormat("en", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    second: "2-digit",
+    timeZoneName: "short",
+  }).format(new Date(value));
+}
+
 function nodePrWorkflowCommand(update, brand = DEFAULT_BRAND) {
   const npmMajor = update.available.split(".")[0];
   const branchArgument =
@@ -1326,8 +1338,13 @@ function SiteFooter({ snapshot }) {
           <Box>
             <Text as="strong">Node.js ↔ npm release map</Text>
             <Text>
-              Snapshot generated {formatGeneratedAt(snapshot.generatedAt)} UTC
+              Snapshot generated {formatLocalGeneratedAt(snapshot.generatedAt)}
+              {" · "}
+              {Intl.DateTimeFormat().resolvedOptions().timeZone}
             </Text>
+            <code className="footer-command">
+              gh workflow run pages.yml -R reggi/node-npm-release-map
+            </code>
           </Box>
         </Box>
         <Box as="nav" className="footer-nav" aria-label="Footer navigation">

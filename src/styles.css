@@ -970,6 +970,13 @@ a {
   font-size: 12px;
 }
 
+.footer-command {
+  color: var(--purple);
+  font-size: 11px;
+  margin-top: 3px;
+  overflow-wrap: anywhere;
+}
+
 .footer-mark {
   height: 34px;
   width: 34px;
