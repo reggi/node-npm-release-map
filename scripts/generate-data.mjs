@@ -8,6 +8,7 @@ const NODE_REPOSITORY_RAW_URL = "https://raw.githubusercontent.com/nodejs/node";
 const GITHUB_API_URL = "https://api.github.com";
 const NPM_CLI_PULLS_PER_PAGE = 100;
 const NPM_CLI_PULLS_URL = `${GITHUB_API_URL}/repos/npm/cli/pulls?state=open&per_page=${NPM_CLI_PULLS_PER_PAGE}`;
+const TRACKED_NPM_MAJORS = [12, 11, 10];
 
 const NPM_RELEASE_STATES = Object.freeze({
   NPM_RELEASE_PR: "npm-release-pr",
@@ -45,6 +46,18 @@ function compareVersions(a, b) {
     if (left[index] !== right[index]) return left[index] - right[index];
   }
   return 0;
+}
+
+function findUpgradePullRequest(pulls, refs, available) {
+  const availableMajor = versionParts(available)?.[0];
+  if (!Number.isInteger(availableMajor)) return null;
+
+  return pulls.find(
+    (pull) =>
+      refs.includes(pull.base)
+      && versionParts(pull.version)?.[0] === availableMajor
+      && compareVersions(pull.version, available) >= 0,
+  ) ?? null;
 }
 
 function latestStableByMajor(versions) {
@@ -313,12 +326,9 @@ const [branchVersions, mainNpm, openNpmUpgradePulls] = await Promise.all([
 const branchVersionsByCycle = new Map(branchVersions);
 const mainNpmMajor = versionParts(mainNpm)?.[0];
 const mainAvailable = npmLatestByMajor.get(mainNpmMajor);
-const mainPullRequest = openNpmUpgradePulls.find(
-  (pull) =>
-    mainAvailable
-    && pull.base === "main"
-    && compareVersions(pull.version, mainAvailable) >= 0,
-);
+const mainPullRequest = mainAvailable
+  ? findUpgradePullRequest(openNpmUpgradePulls, ["main"], mainAvailable)
+  : null;
 const mainUpdate = mainAvailable
   && compareVersions(mainAvailable, mainNpm) > 0
   && !mainPullRequest
@@ -330,10 +340,13 @@ const mainUpdate = mainAvailable
       available: mainAvailable,
     }
   : null;
-const pendingNodeUpdates = mainUpdate ? [mainUpdate] : [];
+const pendingNodeUpdates = [];
+const pendingNodeBackports = [];
 const stagedNodeUpdates = [];
 const mergedNodeUpdates = [];
-const openNodeUpdates = mainPullRequest ? [mainPullRequest] : [];
+const openNodeUpdates = openNpmUpgradePulls.filter(
+  (pull) => pull.base === "main",
+);
 
 for (const line of maintainedLines) {
   const bundledMajor = versionParts(line.latestNpm)?.[0];
@@ -382,10 +395,10 @@ for (const line of maintainedLines) {
 
   const pullRequest = bundledMajor === mainNpmMajor
     ? mainPullRequest
-    : openNpmUpgradePulls.find(
-      (pull) =>
-        [branches.stagingRef, branches.releaseRef].includes(pull.base)
-        && compareVersions(pull.version, available) >= 0,
+    : findUpgradePullRequest(
+      openNpmUpgradePulls,
+      [branches.stagingRef, branches.releaseRef],
+      available,
     );
   if (pullRequest) {
     line.npmUpdate = {
@@ -417,14 +430,123 @@ for (const line of maintainedLines) {
     available,
     ref: branches.stagingRef,
   };
+}
+
+const integrationSourcesByMajor = new Map();
+for (const major of TRACKED_NPM_MAJORS) {
+  const available = npmLatestByMajor.get(major);
+  if (!available) continue;
+
+  const mainMajorPullRequest = findUpgradePullRequest(
+    openNpmUpgradePulls,
+    ["main"],
+    available,
+  );
+  const mainCarriesMajor =
+    mainNpmMajor === major
+    && compareVersions(mainNpm, available) >= 0;
+  const shouldTargetMain =
+    major === mainNpmMajor
+    || major > maxBundledMajor;
+
+  if (!shouldTargetMain) continue;
+
+  if (!mainCarriesMajor && !mainMajorPullRequest) {
+    pendingNodeUpdates.push({
+      state: NPM_RELEASE_STATES.AWAITING_NODE_PR,
+      kind: "integration",
+      target: "main",
+      bundled: mainNpm,
+      available,
+      ref: "main",
+    });
+  }
+
+  integrationSourcesByMajor.set(major, [
+    {
+      nodeCycle: null,
+      ref: "main",
+      status: mainCarriesMajor
+        ? "available"
+        : mainMajorPullRequest
+          ? "in-review"
+          : "needs-pr",
+    },
+  ]);
+}
+
+const maintainedLinesByDescendingCycle = [...maintainedLines].sort(
+  (a, b) => Number(b.cycle) - Number(a.cycle),
+);
+
+for (const line of maintainedLinesByDescendingCycle) {
+  const major = versionParts(line.latestNpm)?.[0];
+  const available = npmLatestByMajor.get(major);
+  const branches = line.branchNpm;
+  if (!available || !branches) continue;
+
+  const branchPullRequest = findUpgradePullRequest(
+    openNpmUpgradePulls,
+    [branches.releaseRef, branches.stagingRef],
+    available,
+  );
+  const branchCarriesVersion =
+    compareVersions(line.latestNpm, available) >= 0
+    || compareVersions(branches.release, available) >= 0
+    || compareVersions(branches.staging, available) >= 0;
+
+  if (branchCarriesVersion || branchPullRequest) {
+    const sourceList = integrationSourcesByMajor.get(major) ?? [];
+    sourceList.push({
+      nodeCycle: Number(line.cycle),
+      ref: branches.releaseRef,
+      status: branchCarriesVersion ? "available" : "in-review",
+    });
+    integrationSourcesByMajor.set(major, sourceList);
+    continue;
+  }
+
+  const sourceList = integrationSourcesByMajor.get(major) ?? [];
+  const source = sourceList
+    .filter(
+      (candidate) =>
+        candidate.nodeCycle === null
+        || candidate.nodeCycle > Number(line.cycle),
+    )
+    .sort((a, b) => {
+      if (a.nodeCycle === null) return 1;
+      if (b.nodeCycle === null) return -1;
+      return a.nodeCycle - b.nodeCycle;
+    })[0];
+
+  if (source) {
+    pendingNodeBackports.push({
+      state: NPM_RELEASE_STATES.AWAITING_NODE_PR,
+      kind: "node-backport",
+      target: line.cycle,
+      source: source.ref,
+      sourceStatus: source.status,
+      bundled: line.latestNpm,
+      available,
+      ref: branches.stagingRef,
+    });
+    continue;
+  }
+
   pendingNodeUpdates.push({
     state: NPM_RELEASE_STATES.AWAITING_NODE_PR,
-    kind: "backport",
+    kind: "release-branch",
     target: line.cycle,
     bundled: line.latestNpm,
     available,
     ref: branches.stagingRef,
   });
+  sourceList.push({
+    nodeCycle: Number(line.cycle),
+    ref: branches.releaseRef,
+    status: "needs-pr",
+  });
+  integrationSourcesByMajor.set(major, sourceList);
 }
 
 await Promise.all(
@@ -436,18 +558,22 @@ await Promise.all(
   }),
 );
 
-const trackedNpmMajors = [12, 11, 10].map((major) => {
+const trackedNpmMajors = TRACKED_NPM_MAJORS.map((major) => {
   const latest = npmLatestByMajor.get(major) ?? null;
+  const mainMajorPullRequest = latest
+    ? findUpgradePullRequest(openNpmUpgradePulls, ["main"], latest)
+    : null;
   const branches = maintainedLines
     .filter((line) => versionParts(line.latestNpm)?.[0] === major)
     .map((line) => {
       const branchNpm = line.branchNpm;
-      const pullRequest = openNpmUpgradePulls.find(
-        (pull) =>
-          [branchNpm.releaseRef, branchNpm.stagingRef].includes(pull.base)
-          && latest
-          && compareVersions(pull.version, latest) >= 0,
-      );
+      const pullRequest = latest
+        ? findUpgradePullRequest(
+          openNpmUpgradePulls,
+          [branchNpm.releaseRef, branchNpm.stagingRef],
+          latest,
+        )
+        : null;
       const mergedUpdate = mergedNodeUpdates.find(
         (update) =>
           update.nodeCycle === line.cycle
@@ -485,7 +611,7 @@ const trackedNpmMajors = [12, 11, 10].map((major) => {
       };
     });
 
-  if (mainNpmMajor === major) {
+  if (mainNpmMajor === major || mainMajorPullRequest) {
     branches.unshift({
       nodeCycle: null,
       label: "Node.js main",
@@ -496,12 +622,14 @@ const trackedNpmMajors = [12, 11, 10].map((major) => {
       stagingRef: null,
       stagingNpm: null,
       status:
-        latest && compareVersions(mainNpm, latest) >= 0
+        mainNpmMajor === major
+          && latest
+          && compareVersions(mainNpm, latest) >= 0
           ? "current"
-          : mainPullRequest
+          : mainMajorPullRequest
             ? "in-review"
             : "needs-action",
-      pullRequest: mainPullRequest,
+      pullRequest: mainMajorPullRequest,
       provenance: null,
     });
   }
@@ -537,6 +665,7 @@ const snapshot = {
     pendingReleases,
     pendingBackports,
     pendingNodeUpdates,
+    pendingNodeBackports,
     openNodeUpdates,
     stagedNodeUpdates,
     mergedNodeUpdates,

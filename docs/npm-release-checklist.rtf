@@ -31,27 +31,24 @@ Query: is:pr is:open label:"autorelease: pending"\f0\par
 Query: is:pr is:open backport\f0\par
 \par
 \fs32\b npm to Node.js tab: branch state reference\b0\fs24\par
-\b What this checks:\b0  The latest registry release for npm@10, npm@11, and npm@12 compared with every maintained Node.js branch that carries each major.\par
+\b What this checks:\b0  The latest registry release for npm@10, npm@11, and npm@12 compared with every maintained Node.js branch that carries each major, plus integration ownership and remediation.\par
 \b Published:\b0  The latest npm version is included in a published Node.js release.\par
 \b Current:\b0  The latest npm version is present on Node.js main.\par
 \b Merged*:\b0  The latest npm version is on a Node.js release or staging branch but has not shipped yet. When that branch next publishes a Node.js release, the npm version will be included.\par
 \b In review:\b0  A matching Node.js integration pull request is open.\par
-\b Needs action:\b0  A newer npm release is available, but no Node.js integration pull request was found.\par
+\b Pending release:\b0  A newer npm release is still being prepared in npm/cli.\par
+\b npm action:\b0  The npm team must create the listed Node.js integration pull request.\par
+\b Node.js action:\b0  The Node.js release team must backport an existing integration to the branch.\par
+\b Out of date:\b0  The branch is behind and no more specific action was detected.\par
 \b No Node.js branch assigned:\b0  The npm major is available, but no maintained Node.js branch carries it yet.\par
+\b Integration details and remediation:\b0  Expand this section under each npm major to see pending npm publication, exact npm workflow commands, open Node.js integration pull requests, Node.js release team backports, or confirmation that no action is required.\par
+\b Main branch rule:\b0  When Node.js main carries the npm major, create only the main integration pull request. The Node.js release team backports it to lower maintained lines after it merges.\par
 \b Manual search:\b0\par
 \f1 Search: https://github.com/search?type=pullrequests\par
 Query: repo:nodejs/node is:pr is:open label:npm in:title "deps: upgrade npm to"\f0\par
 \par
-\b Create the Node.js integration pull request after npm is published:\b0\par
-\f1 gh workflow run create-node-pr.yml -R npm/cli -f spec=next-11\f0\par
-\par
-\b Create a pull request for an older npm major used by an LTS Node.js line:\b0\par
-\f1 gh workflow run create-node-pr.yml -R npm/cli -f spec=next-10 -f branch=22\f0\par
-\par
-When the same npm version is used by Node.js main and multiple maintained Node.js lines, create the pull request targeting main only.\par
-\par
 \fs32\b Node.js to npm tab: confirm what shipped\b0\fs24\par
-Use the version map after the two release checks. It shows the latest Node.js to npm mapping for every Node.js release line. Expand a line to inspect every published release and the npm version bundled with it.\par
+Use the version map after the three release checks. It shows the latest Node.js to npm mapping for every Node.js release line. Expand a line to inspect every published release and the npm version bundled with it.\par
 \par
 End of life Node.js lines are hidden by default. Show them when historical release information is needed.\par
 \par

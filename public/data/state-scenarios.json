@@ -1,0 +1,594 @@
+{
+  "sharedLines": [
+    {
+      "cycle": "26",
+      "latestNode": "v26.4.0",
+      "latestNpm": "11.5.0",
+      "lts": false,
+      "eol": "2027-06-01",
+      "isEol": false,
+      "releases": [
+        {
+          "node": "v26.4.0",
+          "npm": "11.5.0",
+          "date": "2026-01-12",
+          "lts": false
+        },
+        {
+          "node": "v26.3.0",
+          "npm": "11.4.0",
+          "date": "2025-12-18",
+          "lts": false
+        }
+      ],
+      "branchNpm": {
+        "releaseRef": "v26.x",
+        "release": "11.5.0",
+        "stagingRef": "v26.x-staging",
+        "staging": "11.5.0"
+      },
+      "npmUpdate": null
+    }
+  ],
+  "sharedTrackedMajors": [
+    {
+      "major": 12,
+      "latest": "12.2.0",
+      "status": "tracked",
+      "branches": []
+    },
+    {
+      "major": 11,
+      "latest": "11.5.0",
+      "status": "tracked",
+      "branches": []
+    },
+    {
+      "major": 10,
+      "latest": "10.9.9",
+      "status": "tracked",
+      "branches": []
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "branch-published",
+      "group": "Branch state",
+      "title": "Published",
+      "summary": "Latest npm is in a published Node.js release",
+      "description": "The latest npm release for the major is already bundled in the newest published Node.js release.",
+      "view": "branch-state",
+      "snapshot": {
+        "generatedAt": "2026-01-15T12:00:00.000Z",
+        "releaseCount": 1,
+        "sources": {},
+        "npm": {
+          "latest": "11.5.0",
+          "main": "11.5.0",
+          "maxBundledMajor": 11,
+          "bundledMajors": [11],
+          "pendingReleases": [],
+          "pendingBackports": [],
+          "pendingNodeUpdates": [],
+          "pendingNodeBackports": [],
+          "openNodeUpdates": [],
+          "stagedNodeUpdates": [],
+          "mergedNodeUpdates": [],
+          "trackedMajors": [
+            {
+              "major": 11,
+              "latest": "11.5.0",
+              "status": "tracked",
+              "branches": [
+                {
+                  "nodeCycle": "26",
+                  "label": "Node.js 26",
+                  "publishedNode": "v26.4.0",
+                  "publishedNpm": "11.5.0",
+                  "releaseRef": "v26.x",
+                  "releaseNpm": "11.5.0",
+                  "stagingRef": "v26.x-staging",
+                  "stagingNpm": "11.5.0",
+                  "status": "published",
+                  "pullRequest": null,
+                  "provenance": null
+                }
+              ]
+            }
+          ],
+          "unbundledNewerMajors": []
+        },
+        "lines": []
+      }
+    },
+    {
+      "id": "branch-current",
+      "group": "Branch state",
+      "title": "Current on main",
+      "summary": "Latest npm is present on Node.js main",
+      "description": "Node.js main already contains the latest npm release, but no published Node.js release is represented in this isolated scenario.",
+      "view": "branch-state",
+      "snapshot": {
+        "generatedAt": "2026-01-15T12:00:00.000Z",
+        "releaseCount": 0,
+        "sources": {},
+        "npm": {
+          "latest": "12.2.0",
+          "main": "12.2.0",
+          "maxBundledMajor": 12,
+          "bundledMajors": [12],
+          "pendingReleases": [],
+          "pendingBackports": [],
+          "pendingNodeUpdates": [],
+          "pendingNodeBackports": [],
+          "openNodeUpdates": [],
+          "stagedNodeUpdates": [],
+          "mergedNodeUpdates": [],
+          "trackedMajors": [
+            {
+              "major": 12,
+              "latest": "12.2.0",
+              "status": "tracked",
+              "branches": [
+                {
+                  "nodeCycle": null,
+                  "label": "Node.js main",
+                  "publishedNode": null,
+                  "publishedNpm": null,
+                  "releaseRef": "main",
+                  "releaseNpm": "12.2.0",
+                  "stagingRef": null,
+                  "stagingNpm": null,
+                  "status": "current",
+                  "pullRequest": null,
+                  "provenance": null
+                }
+              ]
+            }
+          ],
+          "unbundledNewerMajors": []
+        },
+        "lines": []
+      }
+    },
+    {
+      "id": "branch-merged",
+      "group": "Branch state",
+      "title": "Merged but unpublished",
+      "summary": "Latest npm is on a staging branch",
+      "description": "The npm update has merged into a Node.js staging branch and will ship with a future Node.js release.",
+      "view": "branch-state",
+      "snapshot": {
+        "generatedAt": "2026-01-15T12:00:00.000Z",
+        "releaseCount": 1,
+        "sources": {},
+        "npm": {
+          "latest": "11.5.0",
+          "main": "11.5.0",
+          "maxBundledMajor": 11,
+          "bundledMajors": [11],
+          "pendingReleases": [],
+          "pendingBackports": [],
+          "pendingNodeUpdates": [],
+          "pendingNodeBackports": [],
+          "openNodeUpdates": [],
+          "stagedNodeUpdates": [],
+          "mergedNodeUpdates": [],
+          "trackedMajors": [
+            {
+              "major": 11,
+              "latest": "11.5.0",
+              "status": "tracked",
+              "branches": [
+                {
+                  "nodeCycle": "24",
+                  "label": "Node.js 24",
+                  "publishedNode": "v24.8.0",
+                  "publishedNpm": "11.4.0",
+                  "releaseRef": "v24.x",
+                  "releaseNpm": "11.4.0",
+                  "stagingRef": "v24.x-staging",
+                  "stagingNpm": "11.5.0",
+                  "status": "merged",
+                  "pullRequest": null,
+                  "provenance": {
+                    "commit": {
+                      "sha": "fixture-merged-commit",
+                      "shortSha": "fixture123456",
+                      "url": "#fixture-commit"
+                    },
+                    "pullRequest": {
+                      "number": 12001,
+                      "url": "#fixture-pr"
+                    }
+                  }
+                }
+              ]
+            }
+          ],
+          "unbundledNewerMajors": []
+        },
+        "lines": []
+      }
+    },
+    {
+      "id": "branch-in-review",
+      "group": "Branch state",
+      "title": "In review",
+      "summary": "An integration pull request is open",
+      "description": "The latest npm release has an open integration pull request targeting Node.js main.",
+      "view": "branch-state",
+      "snapshot": {
+        "generatedAt": "2026-01-15T12:00:00.000Z",
+        "releaseCount": 0,
+        "sources": {},
+        "npm": {
+          "latest": "12.2.0",
+          "main": "11.5.0",
+          "maxBundledMajor": 11,
+          "bundledMajors": [11],
+          "pendingReleases": [],
+          "pendingBackports": [],
+          "pendingNodeUpdates": [],
+          "pendingNodeBackports": [],
+          "openNodeUpdates": [
+            {
+              "number": 12002,
+              "url": "#fixture-pr",
+              "title": "deps: upgrade npm to 12.2.0",
+              "version": "12.2.0",
+              "base": "main",
+              "state": "node-pr-review"
+            }
+          ],
+          "stagedNodeUpdates": [],
+          "mergedNodeUpdates": [],
+          "trackedMajors": [
+            {
+              "major": 12,
+              "latest": "12.2.0",
+              "status": "tracked",
+              "branches": [
+                {
+                  "nodeCycle": null,
+                  "label": "Node.js main",
+                  "publishedNode": null,
+                  "publishedNpm": null,
+                  "releaseRef": "main",
+                  "releaseNpm": "11.5.0",
+                  "stagingRef": null,
+                  "stagingNpm": null,
+                  "status": "in-review",
+                  "pullRequest": {
+                    "number": 12002,
+                    "url": "#fixture-pr",
+                    "title": "deps: upgrade npm to 12.2.0",
+                    "version": "12.2.0",
+                    "base": "main",
+                    "state": "node-pr-review"
+                  },
+                  "provenance": null
+                }
+              ]
+            }
+          ],
+          "unbundledNewerMajors": [
+            {
+              "major": 12,
+              "latest": "12.2.0"
+            }
+          ]
+        },
+        "lines": []
+      }
+    },
+    {
+      "id": "branch-needs-action",
+      "group": "Branch state",
+      "title": "Needs action",
+      "summary": "A newer npm release has no integration PR",
+      "description": "The maintained Node.js branch carries an older npm release and no pull request or merged branch update was found.",
+      "view": "branch-state",
+      "snapshot": {
+        "generatedAt": "2026-01-15T12:00:00.000Z",
+        "releaseCount": 1,
+        "sources": {},
+        "npm": {
+          "latest": "12.2.0",
+          "main": "12.2.0",
+          "maxBundledMajor": 12,
+          "bundledMajors": [12, 10],
+          "pendingReleases": [],
+          "pendingBackports": [],
+          "pendingNodeUpdates": [],
+          "pendingNodeBackports": [],
+          "openNodeUpdates": [],
+          "stagedNodeUpdates": [],
+          "mergedNodeUpdates": [],
+          "trackedMajors": [
+            {
+              "major": 10,
+              "latest": "10.9.9",
+              "status": "tracked",
+              "branches": [
+                {
+                  "nodeCycle": "22",
+                  "label": "Node.js 22",
+                  "publishedNode": "v22.20.0",
+                  "publishedNpm": "10.9.8",
+                  "releaseRef": "v22.x",
+                  "releaseNpm": "10.9.8",
+                  "stagingRef": "v22.x-staging",
+                  "stagingNpm": "10.9.8",
+                  "status": "needs-action",
+                  "pullRequest": null,
+                  "provenance": null
+                }
+              ]
+            }
+          ],
+          "unbundledNewerMajors": []
+        },
+        "lines": []
+      }
+    },
+    {
+      "id": "branch-unassigned",
+      "group": "Branch state",
+      "title": "No branch assigned",
+      "summary": "The npm major has no maintained Node.js branch",
+      "description": "The npm major is published, but no maintained Node.js branch currently carries it or has an integration pull request.",
+      "view": "branch-state",
+      "snapshot": {
+        "generatedAt": "2026-01-15T12:00:00.000Z",
+        "releaseCount": 0,
+        "sources": {},
+        "npm": {
+          "latest": "12.2.0",
+          "main": "11.5.0",
+          "maxBundledMajor": 11,
+          "bundledMajors": [11],
+          "pendingReleases": [],
+          "pendingBackports": [],
+          "pendingNodeUpdates": [],
+          "pendingNodeBackports": [],
+          "openNodeUpdates": [],
+          "stagedNodeUpdates": [],
+          "mergedNodeUpdates": [],
+          "trackedMajors": [
+            {
+              "major": 12,
+              "latest": "12.2.0",
+              "status": "unassigned",
+              "branches": []
+            }
+          ],
+          "unbundledNewerMajors": [
+            {
+              "major": 12,
+              "latest": "12.2.0"
+            }
+          ]
+        },
+        "lines": []
+      }
+    },
+    {
+      "id": "release-main-command",
+      "group": "Integration ownership",
+      "title": "Create a main integration PR",
+      "summary": "One command targets Node.js main",
+      "description": "Node.js main is the highest integration target, so the npm team runs one workflow command without a branch argument.",
+      "view": "branch-state",
+      "snapshot": {
+        "generatedAt": "2026-01-15T12:00:00.000Z",
+        "releaseCount": 0,
+        "sources": {},
+        "npm": {
+          "latest": "12.2.0",
+          "main": "11.5.0",
+          "maxBundledMajor": 11,
+          "bundledMajors": [11],
+          "pendingReleases": [],
+          "pendingBackports": [],
+          "pendingNodeUpdates": [
+            {
+              "state": "awaiting-node-pr",
+              "kind": "integration",
+              "target": "main",
+              "bundled": "11.5.0",
+              "available": "12.2.0",
+              "ref": "main"
+            }
+          ],
+          "pendingNodeBackports": [],
+          "openNodeUpdates": [],
+          "stagedNodeUpdates": [],
+          "mergedNodeUpdates": [],
+          "trackedMajors": [],
+          "unbundledNewerMajors": []
+        },
+        "lines": []
+      }
+    },
+    {
+      "id": "release-branch-command",
+      "group": "Integration ownership",
+      "title": "Create a release branch PR",
+      "summary": "An older npm major needs a branch argument",
+      "description": "Node.js main carries a different npm major, so the npm team targets the highest maintained Node.js line that still uses this major.",
+      "view": "branch-state",
+      "snapshot": {
+        "generatedAt": "2026-01-15T12:00:00.000Z",
+        "releaseCount": 0,
+        "sources": {},
+        "npm": {
+          "latest": "12.2.0",
+          "main": "12.2.0",
+          "maxBundledMajor": 12,
+          "bundledMajors": [12, 10],
+          "pendingReleases": [],
+          "pendingBackports": [],
+          "pendingNodeUpdates": [
+            {
+              "state": "awaiting-node-pr",
+              "kind": "release-branch",
+              "target": "22",
+              "bundled": "10.9.8",
+              "available": "10.9.9",
+              "ref": "v22.x-staging"
+            }
+          ],
+          "pendingNodeBackports": [],
+          "openNodeUpdates": [],
+          "stagedNodeUpdates": [],
+          "mergedNodeUpdates": [],
+          "trackedMajors": [],
+          "unbundledNewerMajors": []
+        },
+        "lines": []
+      }
+    },
+    {
+      "id": "release-node-backport",
+      "group": "Integration ownership",
+      "title": "Node.js team backport",
+      "summary": "No duplicate npm workflow command",
+      "description": "Node.js 24 and Node.js 22 both carry npm@10. Node.js 24 already has the update, so Node.js 22 is explicitly assigned to the Node.js release team.",
+      "view": "branch-state",
+      "snapshot": {
+        "generatedAt": "2026-01-15T12:00:00.000Z",
+        "releaseCount": 0,
+        "sources": {},
+        "npm": {
+          "latest": "12.2.0",
+          "main": "12.2.0",
+          "maxBundledMajor": 12,
+          "bundledMajors": [12, 11],
+          "pendingReleases": [],
+          "pendingBackports": [],
+          "pendingNodeUpdates": [],
+          "pendingNodeBackports": [
+            {
+              "state": "awaiting-node-pr",
+              "kind": "node-backport",
+              "target": "22",
+              "source": "v24.x",
+              "sourceStatus": "available",
+              "bundled": "10.9.8",
+              "available": "10.9.9",
+              "ref": "v22.x-staging"
+            }
+          ],
+          "openNodeUpdates": [],
+          "stagedNodeUpdates": [],
+          "mergedNodeUpdates": [],
+          "trackedMajors": [],
+          "unbundledNewerMajors": []
+        },
+        "lines": [
+          {
+            "cycle": "24",
+            "latestNode": "v24.8.0",
+            "latestNpm": "10.9.9",
+            "lts": "Krypton",
+            "eol": "2028-04-30",
+            "isEol": false,
+            "releases": [
+              {
+                "node": "v24.8.0",
+                "npm": "10.9.9",
+                "date": "2026-01-10",
+                "lts": "Krypton"
+              }
+            ],
+            "branchNpm": {
+              "releaseRef": "v24.x",
+              "release": "10.9.9",
+              "stagingRef": "v24.x-staging",
+              "staging": "10.9.9"
+            },
+            "npmUpdate": null
+          },
+          {
+            "cycle": "22",
+            "latestNode": "v22.20.0",
+            "latestNpm": "10.9.8",
+            "lts": "Jod",
+            "eol": "2027-04-30",
+            "isEol": false,
+            "releases": [
+              {
+                "node": "v22.20.0",
+                "npm": "10.9.8",
+                "date": "2026-01-08",
+                "lts": "Jod"
+              }
+            ],
+            "branchNpm": {
+              "releaseRef": "v22.x",
+              "release": "10.9.8",
+              "stagingRef": "v22.x-staging",
+              "staging": "10.9.8"
+            },
+            "npmUpdate": {
+              "state": "awaiting-node-pr",
+              "bundled": "10.9.8",
+              "available": "10.9.9",
+              "ref": "v22.x-staging"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "release-mixed-routing",
+      "group": "Integration ownership",
+      "title": "Mixed integration routing",
+      "summary": "One npm command and one Node.js backport",
+      "description": "This complex state demonstrates one npm@12 main integration command and a separate npm@10 backport from Node.js 24 to Node.js 22.",
+      "view": "branch-state",
+      "snapshot": {
+        "generatedAt": "2026-01-15T12:00:00.000Z",
+        "releaseCount": 0,
+        "sources": {},
+        "npm": {
+          "latest": "12.2.0",
+          "main": "12.2.0",
+          "maxBundledMajor": 12,
+          "bundledMajors": [12, 11, 10],
+          "pendingReleases": [],
+          "pendingBackports": [],
+          "pendingNodeUpdates": [
+            {
+              "state": "awaiting-node-pr",
+              "kind": "integration",
+              "target": "main",
+              "bundled": "11.5.0",
+              "available": "12.2.0",
+              "ref": "main"
+            }
+          ],
+          "pendingNodeBackports": [
+            {
+              "state": "awaiting-node-pr",
+              "kind": "node-backport",
+              "target": "22",
+              "source": "v24.x",
+              "sourceStatus": "available",
+              "bundled": "10.9.8",
+              "available": "10.9.9",
+              "ref": "v22.x-staging"
+            }
+          ],
+          "openNodeUpdates": [],
+          "stagedNodeUpdates": [],
+          "mergedNodeUpdates": [],
+          "trackedMajors": [],
+          "unbundledNewerMajors": []
+        },
+        "lines": []
+      }
+    }
+  ]
+}

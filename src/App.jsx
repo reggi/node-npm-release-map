@@ -1,4 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import {
   AlertIcon,
   CheckCircleFillIcon,
@@ -35,6 +41,21 @@ const npmReleaseQuery = 'is:pr is:open label:"autorelease: pending"';
 const npmBackportQuery = "is:pr is:open backport";
 const nodeIntegrationQuery =
   'repo:nodejs/node is:pr is:open label:npm in:title "deps: upgrade npm to"';
+const DEFAULT_BRAND = Object.freeze({
+  node: "Node.js",
+  npm: "npm",
+  nodeRepository: "nodejs/node",
+  npmRepository: "npm/cli",
+  demo: false,
+});
+const DEMO_BRAND = Object.freeze({
+  node: "Node.js",
+  npm: "npm",
+  nodeRepository: "nodejs/node",
+  npmRepository: "npm/cli",
+  demo: true,
+});
+const BrandContext = createContext(DEFAULT_BRAND);
 
 const githubPullSearchUrl = (repository, query) =>
   `https://github.com/${repository}/pulls?q=${encodeURIComponent(query)}`;
@@ -57,32 +78,47 @@ function formatGeneratedAt(value) {
   }).format(new Date(value));
 }
 
-function formatNodeVersion(value) {
-  return `Node.js ${value}`;
+function nodePrWorkflowCommand(update, brand = DEFAULT_BRAND) {
+  const npmMajor = update.available.split(".")[0];
+  const branchArgument =
+    update.kind === "release-branch" ? ` -f branch=${update.target}` : "";
+  return `gh workflow run create-node-pr.yml -R ${brand.npmRepository} -f spec=next-${npmMajor}${branchArgument}`;
 }
 
 function VersionBadge({ product, version }) {
+  const brand = useContext(BrandContext);
   const label =
     product === "node"
       ? version === "main"
-        ? "Node.js main"
-        : formatNodeVersion(version)
-      : `npm@${version}`;
+        ? `${brand.node} main`
+        : `${brand.node} ${version}`
+      : `${brand.npm}@${version}`;
 
   return <span className={`version-badge ${product}`}>{label}</span>;
 }
 
 function BranchReference({ repository, branch }) {
+  const brand = useContext(BrandContext);
   const product = repository === "nodejs/node" ? "node" : "npm";
-  return (
+  const displayRepository =
+    product === "node" ? brand.nodeRepository : brand.npmRepository;
+  const contents = (
+    <>
+      <GitBranchIcon size={12} />
+      {displayRepository}#{branch}
+    </>
+  );
+
+  return brand.demo ? (
+    <span className={`branch-reference ${product}`}>{contents}</span>
+  ) : (
     <Link
       className={`branch-reference ${product}`}
       href={`https://github.com/${repository}/tree/${encodeURIComponent(branch)}`}
       target="_blank"
       rel="noreferrer"
     >
-      <GitBranchIcon size={12} />
-      {repository}#{branch}
+      {contents}
     </Link>
   );
 }
@@ -103,6 +139,7 @@ function useHashRoute() {
   const getRoute = () => {
     if (window.location.hash === "#/branch-state") return "branch-state";
     if (window.location.hash === "#/release-status") return "release-status";
+    if (window.location.hash === "#/state-explorer") return "state-explorer";
     return "map";
   };
   const [route, setRoute] = useState(getRoute);
@@ -133,12 +170,20 @@ function App() {
       .catch(setError);
   }, []);
 
+  if (route === "state-explorer") {
+    return <StateExplorer />;
+  }
+
   return (
     <Box className="app-shell">
       <SiteHeader route={route} />
       <Box as="main" className="page-shell">
-        {error ? <ErrorState message={error.message} /> : null}
-        {!snapshot && !error ? <LoadingState /> : null}
+        {error && route !== "state-explorer" ? (
+          <ErrorState message={error.message} />
+        ) : null}
+        {!snapshot && !error && route !== "state-explorer" ? (
+          <LoadingState />
+        ) : null}
         {snapshot && route === "map" ? <ReleaseMap snapshot={snapshot} /> : null}
         {snapshot && route === "branch-state" ? (
           <BranchState snapshot={snapshot} />
@@ -152,7 +197,28 @@ function App() {
   );
 }
 
-function SiteHeader({ route }) {
+function SiteHeader({ route, demo = false, onNavigate = null }) {
+  const navigation = [
+    {
+      route: "map",
+      href: "#/",
+      icon: PackageIcon,
+      label: "Node.js → npm",
+    },
+    {
+      route: "branch-state",
+      href: "#/branch-state",
+      icon: SyncIcon,
+      label: "npm → Node.js",
+    },
+    {
+      route: "release-status",
+      href: "#/release-status",
+      icon: RocketIcon,
+      label: "Release status",
+    },
+  ];
+
   return (
     <Box as="header" className="site-header">
       <Box className="header-inner">
@@ -167,36 +233,47 @@ function SiteHeader({ route }) {
             </Heading>
           </Box>
         </Box>
-        <Button
-          as="a"
-          href="https://github.com/reggi/node-npm-release-map"
-          target="_blank"
-          rel="noreferrer"
-          leadingVisual={MarkGithubIcon}
-        >
-          View source
-        </Button>
+        {demo ? (
+          <Button disabled leadingVisual={MarkGithubIcon}>
+            View source
+          </Button>
+        ) : (
+          <Button
+            as="a"
+            href="https://github.com/reggi/node-npm-release-map"
+            target="_blank"
+            rel="noreferrer"
+            leadingVisual={MarkGithubIcon}
+          >
+            View source
+          </Button>
+        )}
       </Box>
       <Box as="nav" className="tab-bar" aria-label="Dashboard pages">
         <Box className="tab-inner">
-          <a className={route === "map" ? "tab active" : "tab"} href="#/">
-            <PackageIcon size={16} />
-            Node.js → npm
-          </a>
-          <a
-            className={route === "branch-state" ? "tab active" : "tab"}
-            href="#/branch-state"
-          >
-            <SyncIcon size={16} />
-            npm → Node.js
-          </a>
-          <a
-            className={route === "release-status" ? "tab active" : "tab"}
-            href="#/release-status"
-          >
-            <RocketIcon size={16} />
-            Release status
-          </a>
+          {navigation.map((item) => {
+            const Icon = item.icon;
+            const className = route === item.route ? "tab active" : "tab";
+            return demo ? (
+              <a
+                className={className}
+                href="#/state-explorer"
+                key={item.route}
+                onClick={(event) => {
+                  event.preventDefault();
+                  onNavigate(item.route);
+                }}
+              >
+                <Icon size={16} />
+                {item.label}
+              </a>
+            ) : (
+              <a className={className} href={item.href} key={item.route}>
+                <Icon size={16} />
+                {item.label}
+              </a>
+            );
+          })}
         </Box>
       </Box>
     </Box>
@@ -276,18 +353,20 @@ function ReleaseMap({ snapshot }) {
   );
 }
 
-function BranchState({ snapshot }) {
+function BranchState({ snapshot, demo = false }) {
+  const brand = useContext(BrandContext);
+  const integrationVersions = buildIntegrationVersions(snapshot.npm);
   return (
     <>
       <PageIntro
         eyebrow="Current branch state"
-        title="npm → Node.js"
+        title={`${brand.npm} → ${brand.node}`}
         description={
           <>
             Start with <VersionBadge product="npm" version="10" />,{" "}
             <VersionBadge product="npm" version="11" />, or{" "}
             <VersionBadge product="npm" version="12" /> and see every maintained
-            Node.js branch that currently carries it. This is current internal
+            {` ${brand.node} `}branch that currently carries it. This is current internal
             state, not a release checklist.
           </>
         }
@@ -297,15 +376,18 @@ function BranchState({ snapshot }) {
       <Box className="info-banner">
         <GitBranchIcon size={18} />
         <Text>
-          This page answers which Node.js branches contain each npm major.
-          Published means users can receive the version in a Node.js release.
+          This page answers which {brand.node} branches contain each {brand.npm} major.
+          Published means users can receive the version in a {brand.node} release.
           Merged* means it is on a branch but has not shipped yet. When that
-          Node.js branch next publishes a release, the npm version will be
+          {` ${brand.node} `}branch next publishes a release, the {brand.npm} version will be
           included.
         </Text>
       </Box>
 
-      <MajorTrackingMatrix majors={snapshot.npm.trackedMajors ?? []} />
+      <MajorTrackingMatrix
+        integrationVersions={integrationVersions}
+        majors={snapshot.npm.trackedMajors ?? []}
+      />
 
       <Box className="manual-panel branch-manual-panel">
         <Box>
@@ -316,15 +398,21 @@ function BranchState({ snapshot }) {
           </Text>
           <code>{nodeIntegrationQuery}</code>
         </Box>
-        <Button
-          as="a"
-          href={`https://github.com/search?q=${encodeURIComponent(nodeIntegrationQuery)}&type=pullrequests`}
-          target="_blank"
-          rel="noreferrer"
-          trailingVisual={LinkExternalIcon}
-        >
-          Search integration pull requests
-        </Button>
+        {demo ? (
+          <Button disabled trailingVisual={LinkExternalIcon}>
+            Search integration pull requests
+          </Button>
+        ) : (
+          <Button
+            as="a"
+            href={`https://github.com/search?q=${encodeURIComponent(nodeIntegrationQuery)}&type=pullrequests`}
+            target="_blank"
+            rel="noreferrer"
+            trailingVisual={LinkExternalIcon}
+          >
+            Search integration pull requests
+          </Button>
+        )}
       </Box>
     </>
   );
@@ -414,15 +502,16 @@ function ReleaseLine({ line }) {
   );
 }
 
-function ReleaseStatus({ snapshot }) {
+function ReleaseStatus({ snapshot, demo = false }) {
+  const brand = useContext(BrandContext);
   const checks = buildReleaseChecks(snapshot.npm);
 
   return (
     <>
       <PageIntro
         eyebrow="In flight release work"
-        title="Follow active npm release work, one check at a time"
-        description="Read from top to bottom. These checks focus on work a release engineer needs to inspect before npm publication. Current npm and Node.js branch state lives on its own page."
+        title={`Follow active ${brand.npm} release work, one check at a time`}
+        description={`Read from top to bottom. These checks cover ${brand.npm} publication and ${brand.npm} release branch backports. ${brand.node} integration ownership and commands are shown on the ${brand.npm} → ${brand.node} page.`}
         visual={RocketIcon}
       />
 
@@ -440,8 +529,8 @@ function ReleaseStatus({ snapshot }) {
         <CheckCircleFillIcon size={18} />
         <Text>
           <strong>Checked and clear</strong> means the check ran and found no
-          action. Open results explain which release pull requests or backports
-          need inspection.
+          action. Open results explain which npm release pull requests or npm
+          backports need attention.
         </Text>
       </Box>
 
@@ -451,6 +540,7 @@ function ReleaseStatus({ snapshot }) {
             check={check}
             number={index + 1}
             isLast={index === checks.length - 1}
+            disableLinks={demo}
             key={check.title}
           />
         ))}
@@ -459,10 +549,193 @@ function ReleaseStatus({ snapshot }) {
   );
 }
 
+function IntegrationVersionDetail({ version, brand }) {
+  const nodeActionGroups = Object.values(
+    version.nodeActions.reduce((groups, action) => {
+      const key = `${action.available}-${action.source}-${action.sourceStatus}`;
+      const group = groups[key] ?? {
+        available: action.available,
+        source: action.source,
+        sourceStatus: action.sourceStatus,
+        targets: [],
+      };
+      group.targets.push(action.target);
+      groups[key] = group;
+      return groups;
+    }, {}),
+  );
+
+  const hasActions =
+    version.pendingReleases.length
+    || version.npmActions.length
+    || version.nodeActions.length
+    || version.pullRequests.length;
+
+  return (
+    <Box className="integration-action-list">
+      {version.pendingReleases.map((release) => (
+        <Box
+          className="integration-action"
+          key={`pending-release-${release.version}`}
+        >
+          <Label variant="attention">Pending npm release</Label>
+          <Text>
+            <VersionBadge product="npm" version={release.version} /> is still
+            being prepared in npm. Wait for publication before creating or
+            evaluating the matching Node.js integration pull request.
+          </Text>
+        </Box>
+      ))}
+      {version.npmActions.map((action) => (
+        <Box className="integration-action" key={`${action.kind}-${action.target}`}>
+          <Label variant="attention">npm team action now</Label>
+          <Text>
+            Create the integration pull request for{" "}
+            <BranchReference
+              repository="nodejs/node"
+              branch={
+                action.kind === "release-branch"
+                  ? `v${action.target}.x`
+                  : "main"
+              }
+            />
+            .
+          </Text>
+          <code className="workflow-command">
+            {nodePrWorkflowCommand(action, brand)}
+          </code>
+        </Box>
+      ))}
+      {nodeActionGroups.map((action) => (
+        <Box
+          className="integration-action"
+          key={`${action.available}-${action.source}`}
+        >
+          <Label variant="accent">Node.js team follow-up</Label>
+          <Text>
+            {action.sourceStatus === "needs-pr"
+              ? "After the integration pull request above merges, backport "
+              : action.sourceStatus === "in-review"
+                ? "After the open integration pull request merges, backport "
+                : "Backport "}
+            <VersionBadge product="npm" version={action.available} /> from{" "}
+            <BranchReference
+              repository="nodejs/node"
+              branch={action.source}
+            />{" "}
+            to{" "}
+            {action.targets.map((target, index) => (
+              <span key={target}>
+                {index ? " and " : null}
+                <BranchReference
+                  repository="nodejs/node"
+                  branch={`v${target}.x`}
+                />
+              </span>
+            ))}
+            . No additional npm workflow command is needed.
+          </Text>
+        </Box>
+      ))}
+      {version.pullRequests.length && !version.npmActions.length ? (
+        <Box className="integration-action">
+          <Label variant="accent">Node.js team</Label>
+          <Text>
+            The integration pull request for{" "}
+            <VersionBadge product="npm" version={version.latest} /> is open. No
+            npm workflow command is needed.
+          </Text>
+          <Box className="result-links">
+            {version.pullRequests.map((pullRequest) =>
+              brand.demo ? (
+                <span key={pullRequest.number}>
+                  PR #{pullRequest.number}
+                </span>
+              ) : (
+                <Link
+                  href={pullRequest.url}
+                  key={pullRequest.number}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  PR #{pullRequest.number} <LinkExternalIcon size={12} />
+                </Link>
+              ),
+            )}
+          </Box>
+        </Box>
+      ) : null}
+      {!hasActions ? (
+        <Box className="integration-action">
+          <Label variant="success">No action</Label>
+          <Text>
+            No integration pull request needs to be created for{" "}
+            <VersionBadge product="npm" version={version.latest} />.
+          </Text>
+        </Box>
+      ) : null}
+    </Box>
+  );
+}
+
+function buildIntegrationVersions(npm) {
+  const pendingNodeUpdates = npm.pendingNodeUpdates ?? [];
+  const pendingNodeBackports = npm.pendingNodeBackports ?? [];
+  const pendingNodeActions = [
+    ...pendingNodeUpdates,
+    ...pendingNodeBackports,
+  ];
+  const integrationVersionsByMajor = new Map(
+    (npm.trackedMajors ?? []).map((item) => [
+      item.major,
+      {
+        major: item.major,
+        latest: item.latest,
+        tracked: item,
+      },
+    ]),
+  );
+
+  for (const item of [
+    ...pendingNodeActions,
+    ...(npm.openNodeUpdates ?? []),
+  ]) {
+    const version = item.available ?? item.version;
+    const major = Number(version?.split(".")[0]);
+    if (!Number.isInteger(major)) continue;
+    const existing = integrationVersionsByMajor.get(major);
+    integrationVersionsByMajor.set(major, {
+      major,
+      latest: existing?.latest ?? version,
+      tracked: existing?.tracked ?? null,
+    });
+  }
+
+  const integrationVersions = [...integrationVersionsByMajor.values()]
+    .map((version) => ({
+      ...version,
+      npmActions: pendingNodeUpdates.filter(
+        (action) => Number(action.available.split(".")[0]) === version.major,
+      ),
+      nodeActions: pendingNodeBackports.filter(
+        (action) => Number(action.available.split(".")[0]) === version.major,
+      ),
+      pullRequests: (npm.openNodeUpdates ?? []).filter(
+        (pullRequest) =>
+          Number(pullRequest.version.split(".")[0]) === version.major,
+      ),
+      pendingReleases: (npm.pendingReleases ?? []).filter(
+        (release) => Number(release.version.split(".")[0]) === version.major,
+      ),
+    }))
+    .sort((a, b) => b.major - a.major);
+
+  return integrationVersions;
+}
+
 function buildReleaseChecks(npm) {
   const pendingReleases = npm.pendingReleases ?? [];
   const pendingBackports = npm.pendingBackports ?? [];
-
   const backportsByMajor = new Map();
   for (const backport of pendingBackports) {
     const entry = backportsByMajor.get(backport.major) ?? {
@@ -536,7 +809,7 @@ function buildReleaseChecks(npm) {
   ];
 }
 
-function ReleaseCheck({ check, number, isLast }) {
+function ReleaseCheck({ check, number, isLast, disableLinks = false }) {
   const Icon = check.icon;
   const statusVariant =
     check.tone === "warning"
@@ -575,7 +848,7 @@ function ReleaseCheck({ check, number, isLast }) {
         {check.results.length ? (
           <Box className="result-list">
             {check.results.map((result, index) => (
-              <Box className="result-row" key={`${result.label}-${index}`}>
+              <Box className="result-row" key={result.key ?? index}>
                 <Box>
                   {result.href ? (
                     <Link href={result.href} target="_blank" rel="noreferrer">
@@ -587,6 +860,9 @@ function ReleaseCheck({ check, number, isLast }) {
                 </Box>
                 <Box className="result-detail">
                   <Text>{result.detail}</Text>
+                  {result.command ? (
+                    <code className="workflow-command">{result.command}</code>
+                  ) : null}
                   {result.links?.length ? (
                     <Box className="result-links">
                       {result.links.map((link) => (
@@ -617,16 +893,25 @@ function ReleaseCheck({ check, number, isLast }) {
             <Text className="manual-title">Manual verification</Text>
             <Text as="p">{check.manual.note}</Text>
             {check.manual.query ? <code>{check.manual.query}</code> : null}
+            {check.manual.commands?.map((command) => (
+              <code key={command}>{command}</code>
+            ))}
           </Box>
-          <Button
-            as="a"
-            href={check.manual.href}
-            target="_blank"
-            rel="noreferrer"
-            trailingVisual={LinkExternalIcon}
-          >
-            {check.manual.label}
-          </Button>
+          {disableLinks ? (
+            <Button disabled trailingVisual={LinkExternalIcon}>
+              {check.manual.label}
+            </Button>
+          ) : (
+            <Button
+              as="a"
+              href={check.manual.href}
+              target="_blank"
+              rel="noreferrer"
+              trailingVisual={LinkExternalIcon}
+            >
+              {check.manual.label}
+            </Button>
+          )}
         </Box>
       </Box>
     </Box>
@@ -638,14 +923,63 @@ const branchStatus = {
   current: { label: "Current", variant: "success" },
   merged: { label: "Merged*", variant: "accent" },
   "in-review": { label: "In review", variant: "attention" },
-  "needs-action": { label: "Needs action", variant: "danger" },
+  "npm-action": { label: "npm action", variant: "danger" },
+  "node-action": { label: "Node.js action", variant: "attention" },
+  "pending-release": { label: "Pending release", variant: "attention" },
+  "out-of-date": { label: "Out of date", variant: "danger" },
 };
 
-function MajorTrackingMatrix({ majors }) {
+function getBranchDisplayStatus(branch, integration) {
+  if (branch.status !== "needs-action") return branch.status;
+
+  const npmAction = integration?.npmActions.find(
+    (action) =>
+      action.target === branch.releaseRef
+      || action.target === branch.nodeCycle
+      || (action.target === "main" && branch.releaseRef === "main"),
+  );
+  if (npmAction) return "npm-action";
+
+  const nodeAction = integration?.nodeActions.find(
+    (action) => action.target === branch.nodeCycle,
+  );
+  if (nodeAction) return "node-action";
+
+  if (integration?.pendingReleases.length) return "pending-release";
+  return "out-of-date";
+}
+
+function getIntegrationSummary(integration) {
+  if (integration.npmActions.length) {
+    return { label: "npm team action", variant: "danger" };
+  }
+  if (integration.pullRequests.length) {
+    return { label: "In review", variant: "attention" };
+  }
+  if (integration.nodeActions.length) {
+    return { label: "Node.js follow-up", variant: "accent" };
+  }
+  if (integration.pendingReleases.length) {
+    return { label: "Pending npm release", variant: "attention" };
+  }
+  return { label: "No action", variant: "success" };
+}
+
+function MajorTrackingMatrix({ majors, integrationVersions }) {
+  const brand = useContext(BrandContext);
+  const integrationByMajor = new Map(
+    integrationVersions.map((version) => [version.major, version]),
+  );
+
   return (
     <Box className="major-matrix">
-      {majors.map((item) => (
-        <Box className="major-card" key={item.major}>
+      {majors.map((item) => {
+        const integration = integrationByMajor.get(item.major);
+        const integrationSummary = integration
+          ? getIntegrationSummary(integration)
+          : { label: "Status unavailable", variant: "secondary" };
+
+        return <Box className="major-card" key={item.major}>
           <Box className="major-heading">
             <Box>
               <Heading as="h4">
@@ -675,7 +1009,11 @@ function MajorTrackingMatrix({ majors }) {
           {item.branches.length ? (
             <Box className="branch-table">
               {item.branches.map((branch) => {
-                const status = branchStatus[branch.status];
+                const displayStatus = getBranchDisplayStatus(
+                  branch,
+                  integration,
+                );
+                const status = branchStatus[displayStatus];
                 return (
                   <Box
                     className="branch-row"
@@ -719,7 +1057,7 @@ function MajorTrackingMatrix({ majors }) {
                     </Box>
                     <Box className="branch-state">
                       <Label
-                        className={`branch-status ${branch.status}`}
+                        className={`branch-status ${displayStatus}`}
                         variant={status.variant}
                       >
                         {status.label}
@@ -740,13 +1078,30 @@ function MajorTrackingMatrix({ majors }) {
               </Text>
             </Box>
           )}
+          {integration ? (
+            <details className="major-integration-details">
+              <summary>
+                <span>Integration details and remediation</span>
+                <Label variant={integrationSummary.variant}>
+                  {integrationSummary.label}
+                </Label>
+              </summary>
+              <Box className="major-integration-content">
+                <IntegrationVersionDetail
+                  brand={brand}
+                  version={integration}
+                />
+              </Box>
+            </details>
+          ) : null}
         </Box>
-      ))}
+      })}
     </Box>
   );
 }
 
 function BranchProvenance({ branch }) {
+  const brand = useContext(BrandContext);
   const links = [
     branch.status === "published" && branch.publishedNode
       ? {
@@ -780,11 +1135,15 @@ function BranchProvenance({ branch }) {
   if (!links.length) return null;
   return (
     <Box className="branch-links">
-      {links.map((link) => (
-        <Link href={link.href} key={link.href} target="_blank" rel="noreferrer">
-          {link.label}
-        </Link>
-      ))}
+      {links.map((link) =>
+        brand.demo ? (
+          <span key={link.href}>{link.label}</span>
+        ) : (
+          <Link href={link.href} key={link.href} target="_blank" rel="noreferrer">
+            {link.label}
+          </Link>
+        ),
+      )}
     </Box>
   );
 }
@@ -809,6 +1168,153 @@ function ErrorState({ message }) {
   );
 }
 
+function StateExplorer() {
+  const [scenarios, setScenarios] = useState([]);
+  const [selectedId, setSelectedId] = useState(null);
+  const [fixturePage, setFixturePage] = useState("branch-state");
+  const [drawerOpen, setDrawerOpen] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    fetch(escapePath("/data/state-scenarios.json"))
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error(`Scenario request failed (${response.status})`);
+        }
+        return response.json();
+      })
+      .then((data) => {
+        const fixtureScenarios = data.scenarios.map((scenario) => ({
+          ...scenario,
+          snapshot: {
+            ...scenario.snapshot,
+            npm: {
+              ...scenario.snapshot.npm,
+              trackedMajors: scenario.snapshot.npm.trackedMajors.length
+                ? scenario.snapshot.npm.trackedMajors
+                : data.sharedTrackedMajors,
+            },
+            lines: scenario.snapshot.lines.length
+              ? scenario.snapshot.lines
+              : data.sharedLines,
+          },
+        }));
+        setScenarios(fixtureScenarios);
+        setSelectedId(fixtureScenarios[0]?.id ?? null);
+        setFixturePage(fixtureScenarios[0]?.view ?? "branch-state");
+      })
+      .catch(setError);
+  }, []);
+
+  const selectedScenario =
+    scenarios.find((scenario) => scenario.id === selectedId) ?? null;
+  const groups = scenarios.reduce((result, scenario) => {
+    const group = result.get(scenario.group) ?? [];
+    group.push(scenario);
+    result.set(scenario.group, group);
+    return result;
+  }, new Map());
+  const closeFixtures = () => {
+    window.location.hash =
+      fixturePage === "map" ? "#/" : `#/${fixturePage}`;
+  };
+
+  return (
+    <Box
+      className={
+        drawerOpen
+          ? "app-shell scenario-app drawer-open"
+          : "app-shell scenario-app"
+      }
+    >
+      {error ? <ErrorState message={error.message} /> : null}
+      {!selectedScenario && !error ? <LoadingState /> : null}
+      {selectedScenario ? (
+        <BrandContext.Provider value={DEMO_BRAND}>
+          <Box className="scenario-fixture-banner">
+            <AlertIcon size={16} />
+            <Text as="strong">
+              This is a test fixture and not real repository state.
+            </Text>
+          </Box>
+          <SiteHeader
+            demo
+            onNavigate={setFixturePage}
+            route={fixturePage}
+          />
+          {!drawerOpen ? (
+            <Button
+              className="scenario-drawer-toggle"
+              onClick={() => setDrawerOpen(true)}
+            >
+              Open scenarios
+            </Button>
+          ) : null}
+          <Box
+            as="aside"
+            className={
+              drawerOpen
+                ? "scenario-drawer open"
+                : "scenario-drawer"
+            }
+          >
+            <Box className="scenario-drawer-heading">
+              <Box>
+                <Text className="eyebrow">Test fixtures</Text>
+                <Heading as="h2">Scenarios</Heading>
+              </Box>
+              <Box className="scenario-drawer-actions">
+                <Button onClick={() => setDrawerOpen(false)}>
+                  Hide drawer
+                </Button>
+                <Button variant="danger" onClick={closeFixtures}>
+                  Close fixtures
+                </Button>
+              </Box>
+            </Box>
+            {[...groups.entries()].map(([group, items]) => (
+              <Box className="scenario-group" key={group}>
+                <Text as="strong">{group}</Text>
+                {items.map((scenario) => (
+                  <button
+                    className={
+                      scenario.id === selectedScenario.id
+                        ? "scenario-button active"
+                        : "scenario-button"
+                    }
+                    key={scenario.id}
+                    onClick={() => {
+                      setSelectedId(scenario.id);
+                      setFixturePage(scenario.view);
+                    }}
+                    type="button"
+                  >
+                    <span>{scenario.title}</span>
+                    <small>{scenario.summary}</small>
+                  </button>
+                ))}
+              </Box>
+            ))}
+          </Box>
+
+          <Box as="main" className="page-shell">
+            {fixturePage === "map" ? (
+              <ReleaseMap snapshot={selectedScenario.snapshot} />
+            ) : null}
+            {fixturePage === "branch-state" ? (
+              <BranchState demo snapshot={selectedScenario.snapshot} />
+            ) : null}
+            {fixturePage === "release-status" ? (
+              <ReleaseStatus demo snapshot={selectedScenario.snapshot} />
+            ) : null}
+          </Box>
+          <SiteFooter snapshot={selectedScenario.snapshot} />
+        </BrandContext.Provider>
+      ) : null}
+    </Box>
+  );
+}
+
 function SiteFooter({ snapshot }) {
   return (
     <Box as="footer" className="site-footer">
@@ -828,6 +1334,7 @@ function SiteFooter({ snapshot }) {
           <Link href="#/">Node.js → npm</Link>
           <Link href="#/branch-state">npm → Node.js</Link>
           <Link href="#/release-status">Release status</Link>
+          <Link href="#/state-explorer">State explorer</Link>
           <Link
             href="https://github.com/reggi/node-npm-release-map"
             target="_blank"
