@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <title>Node.js and npm release map</title>
+  <desc>Find bundled npm versions, matching Node.js branches, and active release work.</desc>
+  <defs>
+    <radialGradient id="glow" cx=".5" cy="0" r=".9">
+      <stop stop-color="#22344e" stop-opacity=".7"/>
+      <stop offset="1" stop-color="#070b12" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="icon" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#20344d"/>
+      <stop offset="1" stop-color="#252c3e"/>
+    </linearGradient>
+    <g id="cube" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="m12 2 10 6v12l-10 6-10-6V8Zm0 12L2 8m10 6L22 8m-10 6v12"/>
+    </g>
+    <g id="sync" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M22 10a10 10 0 0 0-17-5L2 8m0-6v6h6M2 16a10 10 0 0 0 17 5l3-3m0 6v-6h-6"/>
+    </g>
+    <g id="rocket" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="m9 17-3-3C11 5 16 2 24 2c0 8-3 13-12 18l-3-3Zm-3-3H2l3-6h6m1 12v4l6-3v-6M5 19l-3 5 5-3"/>
+      <circle cx="17" cy="9" r="2"/>
+    </g>
+  </defs>
+  <rect width="1200" height="630" fill="#070b12"/>
+  <rect width="1200" height="630" fill="url(#glow)"/>
+  <rect x="552" y="70" width="96" height="96" rx="20" fill="url(#icon)" stroke="#4675ae" stroke-width="1.5"/>
+  <use href="#cube" transform="translate(580 95) scale(1.65)" color="#79c0ff"/>
+  <path d="M568 370h64" stroke="#ff7b72" stroke-width="4" stroke-linecap="round"/>
+  <path d="M120 420h960" stroke="#303b49"/>
+  <path d="M430 459v68m340-68v68" stroke="#303b49"/>
+  <use href="#cube" transform="translate(250 455) scale(1.25)" color="#79c0ff"/>
+  <use href="#sync" transform="translate(585 455) scale(1.25)" color="#79c0ff"/>
+  <use href="#rocket" transform="translate(920 455) scale(1.25)" color="#79c0ff"/>
+  <g font-family="Arial, Helvetica, sans-serif" text-anchor="middle">
+    <text x="600" y="263" fill="#ffffff" font-size="84" font-weight="700" letter-spacing="-3">Node.js <tspan fill="#79c0ff">&#x2194;</tspan> npm</text>
+    <text x="600" y="338" fill="#ffffff" font-size="64" font-weight="700" letter-spacing="-2">release map</text>
+    <g fill="#c3ccd6" font-size="25" font-weight="700">
+      <text x="265" y="527">Node.js &#x2192; npm</text>
+      <text x="600" y="527">npm &#x2192; Node.js</text>
+      <text x="935" y="527">Release status</text>
+    </g>
+  </g>
+</svg>

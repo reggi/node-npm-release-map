@@ -150,6 +150,14 @@ The GitHub Pages workflow installs dependencies with `npm ci`, runs `npm run bui
 
 It deploys on every push to `main`, on manual dispatch, and daily at 06:17 UTC.
 
+`index.html` includes the canonical GitHub Pages URL, Open Graph and Twitter large-image card metadata, and `SoftwareSourceCode` JSON-LD. Keep these URLs and the structured data's `dateModified` current when updating the site. `dateCreated` and `datePublished` reflect the repository creation and first GitHub Pages deployment on 2026-08-26.
+
+The custom 1200 x 630 social card is `public/social-card.png`, with an editable source in `public/social-card.svg`. After editing the SVG, regenerate the PNG with [librsvg](https://wiki.gnome.org/Projects/LibRsvg):
+
+```sh
+rsvg-convert public/social-card.svg -o public/social-card.png
+```
+
 Trigger an immediate dashboard refresh and deployment:
 
 ```sh
